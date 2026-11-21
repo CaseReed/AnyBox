@@ -273,6 +273,7 @@ void Emit(const std::string& line) {
 std::atomic<LPTOP_LEVEL_EXCEPTION_FILTER> g_previousFilter{};
 std::atomic<bool> g_inFilter{};
 std::atomic<DWORD> g_handledThread{};
+PVOID g_keepFilter = nullptr;
 
 LONG WINAPI UnhandledException(EXCEPTION_POINTERS* pointers) {
     if (g_inFilter.exchange(true)) {
@@ -296,6 +297,9 @@ LONG WINAPI UnhandledException(EXCEPTION_POINTERS* pointers) {
     AbxWriteReport(&stop);
     const LPTOP_LEVEL_EXCEPTION_FILTER previous = g_previousFilter.load();
     const LONG result = previous != nullptr ? previous(pointers) : EXCEPTION_CONTINUE_SEARCH;
+    if (result == EXCEPTION_CONTINUE_EXECUTION) {
+        g_reportWritten.store(false);
+    }
     g_handledThread.store(GetCurrentThreadId());
     g_inFilter.store(false);
     return result;
@@ -319,7 +323,7 @@ void Start() {
         g_logFile = std::fopen(logPath.c_str(), "a");
     }
     SetUnhandledExceptionFilter(UnhandledException);
-    AddVectoredExceptionHandler(0, KeepFilter);
+    g_keepFilter = AddVectoredExceptionHandler(0, KeepFilter);
 }
 
 }
@@ -404,6 +408,8 @@ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved) {
     if (reason == DLL_PROCESS_ATTACH) {
         DisableThreadLibraryCalls(instance);
         Start();
+    } else if (reason == DLL_PROCESS_DETACH && reserved == nullptr && g_keepFilter != nullptr) {
+        RemoveVectoredExceptionHandler(g_keepFilter);
     } else if (reason == DLL_PROCESS_DETACH && reserved != nullptr) {
         AbxStop stop{};
         stop.kind = "none";

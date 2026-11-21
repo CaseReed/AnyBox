@@ -35,6 +35,7 @@ EXPECTED = {
     "stub": (0xAB01, "not-implemented"),
     "crash": (0xC0000005, "crash"),
     "crash_chained": (0xC0000005, "crash"),
+    "crash_recovered": (0, "none"),
     "device_scarlett": (0, "none"),
     "device_xboxone": (0, "none"),
     "device_pc": (0, "none"),
@@ -135,6 +136,8 @@ def main():
         assert "startup ok" in run.stdout
     if args.scenario == "crash_chained":
         assert run.stdout.count("title filter") == 1, run.stdout
+    if args.scenario == "crash_recovered":
+        assert "recovered ok" in run.stdout, run.stdout
     if args.scenario == "gamesave":
         assert "gamesave ok" in run.stdout
         saves = local / "AnyBox" / "1234ABCD" / "XGameSave"

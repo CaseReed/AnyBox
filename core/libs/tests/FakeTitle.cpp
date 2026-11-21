@@ -131,6 +131,18 @@ LONG WINAPI ChainingFilter(EXCEPTION_POINTERS* pointers) {
     return g_titleFilter != nullptr ? g_titleFilter(pointers) : EXCEPTION_CONTINUE_SEARCH;
 }
 
+void* g_readOnlyPage = nullptr;
+
+LONG WINAPI RecoveringFilter(EXCEPTION_POINTERS* pointers) {
+    const EXCEPTION_RECORD* record = pointers->ExceptionRecord;
+    if (record->ExceptionCode != EXCEPTION_ACCESS_VIOLATION || record->NumberParameters < 2
+        || reinterpret_cast<void*>(record->ExceptionInformation[1]) != g_readOnlyPage) {
+        return EXCEPTION_CONTINUE_SEARCH;
+    }
+    DWORD old = 0;
+    return VirtualProtect(g_readOnlyPage, 4096, PAGE_READWRITE, &old) ? EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH;
+}
+
 int Fail(const char* what) {
     std::printf("FAIL %s\n", what);
     return 1;
@@ -954,6 +966,15 @@ int main(int argc, char** argv) {
         volatile int* null = nullptr;
         *null = 1;
         return Fail("crash returned");
+    }
+    if (std::strcmp(scenario, "crash_recovered") == 0) {
+        XGameRuntimeInitialize();
+        g_readOnlyPage = VirtualAlloc(nullptr, 4096, MEM_COMMIT | MEM_RESERVE, PAGE_READONLY);
+        if (g_readOnlyPage == nullptr) return Fail("VirtualAlloc");
+        SetUnhandledExceptionFilter(RecoveringFilter);
+        *static_cast<volatile int*>(g_readOnlyPage) = 1;
+        std::puts("recovered ok");
+        return 0;
     }
     return TaskQueue();
 }
