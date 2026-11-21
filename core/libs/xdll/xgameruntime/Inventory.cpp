@@ -8,14 +8,6 @@ ABX_API HRESULT XTaskQueueRegisterMonitor() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XTaskQueueUnregisterMonitor() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XTaskQueueRegisterWaiter() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XTaskQueueUnregisterWaiter() { AbxNotImplemented(__func__); }
-ABX_API HRESULT XAsyncBegin() { AbxNotImplemented(__func__); }
-ABX_API HRESULT XAsyncCancel() { AbxNotImplemented(__func__); }
-ABX_API HRESULT XAsyncComplete() { AbxNotImplemented(__func__); }
-ABX_API HRESULT XAsyncGetResult() { AbxNotImplemented(__func__); }
-ABX_API HRESULT XAsyncGetResultSize() { AbxNotImplemented(__func__); }
-ABX_API HRESULT XAsyncGetStatus() { AbxNotImplemented(__func__); }
-ABX_API HRESULT XAsyncRun() { AbxNotImplemented(__func__); }
-ABX_API HRESULT XAsyncSchedule() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XUserAddAsync() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XUserAddResult() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XUserCloseHandle() { AbxNotImplemented(__func__); }

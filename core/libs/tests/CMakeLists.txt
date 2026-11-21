@@ -7,7 +7,7 @@ target_link_libraries(fake_title PRIVATE fake_xgameruntime)
 anybox_static_runtime(fake_title)
 
 if(Python3_FOUND)
-    foreach(scenario IN ITEMS taskqueue stub crash device_scarlett device_xboxone device_pc device_default device_none device_noexecutable device_unknown)
+    foreach(scenario IN ITEMS taskqueue stub crash device_scarlett device_xboxone device_pc device_default device_none device_noexecutable device_unknown async async_null async_terminated async_begin_terminated)
         add_test(NAME e2e_${scenario}
             COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/e2e.py
                 --relinker $<TARGET_FILE:relinker> --title $<TARGET_FILE:fake_title> --libs ${ANYBOX_LIBS_DIR}

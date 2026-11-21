@@ -20,7 +20,7 @@ The [progress page](https://dark3581.github.io/AnyBox/progress.html) lists every
 
 | Library | Serves | State |
 |---|---|---|
-| [xgameruntime](core/libs/xdll/xgameruntime) | `xgameruntime.dll` | XGameRuntime init, XTaskQueue implemented; XAsync, XUser, XGameSave, XPackage, XSystem stubs |
+| [xgameruntime](core/libs/xdll/xgameruntime) | `xgameruntime.dll` | XGameRuntime init, XTaskQueue, XAsync implemented; XUser, XGameSave, XPackage, XSystem stubs |
 | [d3d12_x](core/libs/xdll/d3d12_x) | `d3d12_x.dll`, `d3d12_xs.dll` | entry points declared, all stubs: needs a D3D12.X → desktop D3D12/Vulkan layer |
 | [xaudio2](core/libs/xdll/xaudio2) | `xaudio2_9.dll` | forwarded to the host's XAudio2 |
 | [gameinput](core/libs/xdll/gameinput) | `gameinput.dll` | forwarded to the host's GameInput |

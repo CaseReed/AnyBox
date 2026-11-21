@@ -40,6 +40,20 @@ EXPECTED = {
     "device_none": (0xAB02, "unsupported"),
     "device_noexecutable": (0xAB02, "unsupported"),
     "device_unknown": (0xAB02, "unsupported"),
+    "async": (0, "none"),
+    "async_null": (0xAB02, "unsupported"),
+    "async_terminated": (0xAB02, "unsupported"),
+    "async_begin_terminated": (0xAB02, "unsupported"),
+}
+
+STOPPED_IN = {
+    "stub": "XUserAddAsync",
+    "device_none": "XSystemGetDeviceType",
+    "device_noexecutable": "XSystemGetDeviceType",
+    "device_unknown": "XSystemGetDeviceType",
+    "async_null": "XAsyncGetStatus",
+    "async_terminated": "XAsyncComplete",
+    "async_begin_terminated": "XAsyncBegin",
 }
 
 
@@ -98,6 +112,8 @@ def main():
     assert (run.returncode & 0xFFFFFFFF) == code, f"exit code 0x{run.returncode & 0xFFFFFFFF:x}, expected 0x{code:x}"
     if args.scenario == "taskqueue":
         assert "task queue ok" in run.stdout
+    if args.scenario == "async":
+        assert "async ok" in run.stdout
     if device is not None:
         assert f"device type {device} packaged 0" in run.stdout, run.stdout
 
@@ -114,10 +130,8 @@ def main():
         assert report["game"]["titleId"] == "1234ABCD", report["game"]
         assert report["game"]["name"] == "Fake Title" and report["game"]["version"] == "1.0.2.0", report["game"]
     assert "xgameruntime" in report["libraries"], report["libraries"]
-    if kind == "not-implemented":
-        assert report["stop"]["library"] == "xgameruntime" and report["stop"]["function"] == "XUserAddAsync", report["stop"]
-    if kind == "unsupported":
-        assert report["stop"]["library"] == "xgameruntime" and report["stop"]["function"] == "XSystemGetDeviceType", report["stop"]
+    if kind in ("not-implemented", "unsupported"):
+        assert report["stop"]["library"] == "xgameruntime" and report["stop"]["function"] == STOPPED_IN[args.scenario], report["stop"]
     if kind == "crash":
         assert report["stop"]["exception"]["code"] == "0xc0000005", report["stop"]
         assert report["stop"]["exception"]["module"] == "title.exe", report["stop"]

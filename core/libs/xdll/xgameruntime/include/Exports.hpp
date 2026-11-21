@@ -18,6 +18,15 @@ ABX_API HRESULT XTaskQueueTerminate(XTaskQueueHandle queue, bool wait, void* con
 ABX_API bool XTaskQueueGetCurrentProcessTaskQueue(XTaskQueueHandle* queue);
 ABX_API void XTaskQueueSetCurrentProcessTaskQueue(XTaskQueueHandle queue);
 
+ABX_API HRESULT XAsyncBegin(XAsyncBlock* asyncBlock, void* context, const void* identity, const char* identityName, XAsyncProvider* provider);
+ABX_API HRESULT XAsyncSchedule(XAsyncBlock* asyncBlock, std::uint32_t delayInMs);
+ABX_API void XAsyncComplete(XAsyncBlock* asyncBlock, HRESULT result, std::size_t requiredBufferSize);
+ABX_API void XAsyncCancel(XAsyncBlock* asyncBlock);
+ABX_API HRESULT XAsyncRun(XAsyncBlock* asyncBlock, XAsyncWork* work);
+ABX_API HRESULT XAsyncGetStatus(XAsyncBlock* asyncBlock, bool wait);
+ABX_API HRESULT XAsyncGetResultSize(XAsyncBlock* asyncBlock, std::size_t* bufferSize);
+ABX_API HRESULT XAsyncGetResult(XAsyncBlock* asyncBlock, const void* identity, std::size_t bufferSize, void* buffer, std::size_t* bufferUsed);
+
 ABX_API XSystemDeviceType XSystemGetDeviceType();
 ABX_API bool XPackageIsPackagedProcess();
 
@@ -29,14 +38,6 @@ ABX_API HRESULT XTaskQueueRegisterMonitor();
 ABX_API HRESULT XTaskQueueUnregisterMonitor();
 ABX_API HRESULT XTaskQueueRegisterWaiter();
 ABX_API HRESULT XTaskQueueUnregisterWaiter();
-ABX_API HRESULT XAsyncBegin();
-ABX_API HRESULT XAsyncCancel();
-ABX_API HRESULT XAsyncComplete();
-ABX_API HRESULT XAsyncGetResult();
-ABX_API HRESULT XAsyncGetResultSize();
-ABX_API HRESULT XAsyncGetStatus();
-ABX_API HRESULT XAsyncRun();
-ABX_API HRESULT XAsyncSchedule();
 ABX_API HRESULT XUserAddAsync();
 ABX_API HRESULT XUserAddResult();
 ABX_API HRESULT XUserCloseHandle();
