@@ -369,6 +369,10 @@ ABX_RUNTIME_API const char* AbxTitleName() {
     return Title().name.empty() ? nullptr : Title().name.c_str();
 }
 
+ABX_RUNTIME_API const char* AbxTitleDeviceFamily() {
+    return Title().targetDeviceFamily.empty() ? nullptr : Title().targetDeviceFamily.c_str();
+}
+
 BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved) {
     if (reason == DLL_PROCESS_ATTACH) {
         DisableThreadLibraryCalls(instance);

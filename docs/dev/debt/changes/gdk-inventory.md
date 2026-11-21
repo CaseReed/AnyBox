@@ -12,4 +12,4 @@
 
 ## change [XAsync, XUser, XGameSave]
 
-- [Inventory](../../../core/libs/xdll/xgameruntime/Inventory.cpp) (xgameruntime) - every public runtime export in [the GDK 2610 inventory](../../inventory/gdk-2610-pc.json) not implemented in TaskQueue.cpp or Runtime.cpp is declared without parameters until implemented
+- [Inventory](../../../core/libs/xdll/xgameruntime/Inventory.cpp) (xgameruntime) - every public runtime export in [the GDK 2610 inventory](../../inventory/gdk-2610-pc.json) not implemented in TaskQueue.cpp, Runtime.cpp, System.cpp or Package.cpp is declared without parameters until implemented

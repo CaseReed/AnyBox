@@ -15,6 +15,8 @@ __declspec(dllimport) bool XTaskQueueDispatch(void* queue, std::uint32_t port, s
 __declspec(dllimport) HRESULT XTaskQueueTerminate(void* queue, bool wait, void* context, void (*callback)(void*));
 __declspec(dllimport) void XTaskQueueCloseHandle(void* queue);
 __declspec(dllimport) HRESULT XUserAddAsync();
+__declspec(dllimport) std::uint32_t XSystemGetDeviceType();
+__declspec(dllimport) bool XPackageIsPackagedProcess();
 }
 
 namespace {
@@ -75,6 +77,10 @@ int main(int argc, char** argv) {
     if (std::strcmp(scenario, "stub") == 0) {
         XUserAddAsync();
         return Fail("stub returned");
+    }
+    if (std::strcmp(scenario, "device") == 0) {
+        std::printf("device type %u packaged %d\n", XSystemGetDeviceType(), XPackageIsPackagedProcess() ? 1 : 0);
+        return 0;
     }
     if (std::strcmp(scenario, "crash") == 0) {
         XGameRuntimeInitialize();

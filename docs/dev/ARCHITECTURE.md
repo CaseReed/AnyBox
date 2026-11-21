@@ -70,7 +70,7 @@ flowchart LR
   - `AbxNotImplemented` / `AbxUnsupported` log the library and function, write the run report and end the process with exit code `0xAB01` / `0xAB02`. A title cannot catch these.
   - An unhandled exception filter writes the report for crashes (code, address, module and offset).
   - At normal process exit the report is written with `stop.kind = "none"`.
-  - `AbxTitleId()` and `AbxTitleName()` read `MicrosoftGame.config` beside the executable.
+  - `AbxTitleId()`, `AbxTitleName()` and `AbxTitleDeviceFamily()` read `MicrosoftGame.config` beside the executable.
   - Each library registers itself at load ([`Registration.cpp`](../../core/libs/runtime/src/Registration.cpp)), so the report lists the libraries the title loaded.
 - Libraries link their C++ runtime statically, so the output folder needs no MinGW DLLs.
 

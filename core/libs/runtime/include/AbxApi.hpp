@@ -22,6 +22,7 @@ ABX_RUNTIME_API void AbxUnsupportedAt [[noreturn]] (const char* library, const c
 ABX_RUNTIME_API void AbxLog(const char* channel, const char* format, ...);
 ABX_RUNTIME_API const char* AbxTitleId();
 ABX_RUNTIME_API const char* AbxTitleName();
+ABX_RUNTIME_API const char* AbxTitleDeviceFamily();
 
 #define AbxNotImplemented(name) AbxNotImplementedAt(ABX_LIBRARY_NAME, name, __FILE__, __LINE__)
 #define AbxUnsupported(name, message) AbxUnsupportedAt(ABX_LIBRARY_NAME, name, message, __FILE__, __LINE__)

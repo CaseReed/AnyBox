@@ -10,6 +10,7 @@ struct TitleConfig {
     std::string identityName;
     std::string version;
     std::string name;
+    std::string targetDeviceFamily;
 };
 
 TitleConfig ParseTitleConfig(std::string_view xml);

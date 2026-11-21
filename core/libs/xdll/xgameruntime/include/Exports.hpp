@@ -18,6 +18,9 @@ ABX_API HRESULT XTaskQueueTerminate(XTaskQueueHandle queue, bool wait, void* con
 ABX_API bool XTaskQueueGetCurrentProcessTaskQueue(XTaskQueueHandle* queue);
 ABX_API void XTaskQueueSetCurrentProcessTaskQueue(XTaskQueueHandle queue);
 
+ABX_API XSystemDeviceType XSystemGetDeviceType();
+ABX_API bool XPackageIsPackagedProcess();
+
 ABX_API HRESULT XGameRuntimeInitializeWithOptions();
 ABX_API HRESULT XGameRuntimeIsFeatureAvailable();
 ABX_API HRESULT XTaskQueueCreateComposite();
@@ -57,8 +60,6 @@ ABX_API HRESULT XGameSaveSubmitUpdate();
 ABX_API HRESULT XGameSaveReadBlobData();
 ABX_API HRESULT XGameSaveGetRemainingQuota();
 ABX_API HRESULT XPackageGetCurrentProcessPackageIdentifier();
-ABX_API HRESULT XPackageIsPackagedProcess();
-ABX_API HRESULT XSystemGetDeviceType();
 ABX_API HRESULT XSystemGetConsoleId();
 ABX_API HRESULT XSystemGetAppSpecificDeviceId();
 ABX_API HRESULT XThreadIsTimeSensitive();

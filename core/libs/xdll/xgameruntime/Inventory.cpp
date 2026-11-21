@@ -39,8 +39,6 @@ ABX_API HRESULT XGameSaveSubmitUpdate() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XGameSaveReadBlobData() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XGameSaveGetRemainingQuota() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XPackageGetCurrentProcessPackageIdentifier() { AbxNotImplemented(__func__); }
-ABX_API HRESULT XPackageIsPackagedProcess() { AbxNotImplemented(__func__); }
-ABX_API HRESULT XSystemGetDeviceType() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XSystemGetConsoleId() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XSystemGetAppSpecificDeviceId() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XThreadIsTimeSensitive() { AbxNotImplemented(__func__); }

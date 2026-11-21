@@ -12,4 +12,6 @@ __declspec(dllexport) bool XTaskQueueDispatch(void*, std::uint32_t, std::uint32_
 __declspec(dllexport) HRESULT XTaskQueueTerminate(void*, bool, void*, void*) { return E_FAIL; }
 __declspec(dllexport) void XTaskQueueCloseHandle(void*) {}
 __declspec(dllexport) HRESULT XUserAddAsync() { return E_FAIL; }
+__declspec(dllexport) std::uint32_t XSystemGetDeviceType() { return 0xffffffffu; }
+__declspec(dllexport) bool XPackageIsPackagedProcess() { return true; }
 }
