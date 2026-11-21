@@ -188,7 +188,7 @@ std::string ModuleOf(std::uint64_t address, std::uint64_t& offset) {
 
 std::string Libraries(bool& truncated, std::size_t budget) {
     std::string list = "[";
-    const std::size_t count = std::min(g_libraryCount.load(), MaxLibraries);
+    const std::size_t count = (std::min)(g_libraryCount.load(), MaxLibraries);
     bool first = true;
     for (std::size_t i = 0; i < count; ++i) {
         const char* name = g_libraries[i].load();
@@ -334,7 +334,7 @@ ABX_RUNTIME_API void AbxLog(const char* channel, const char* format, ...) {
     Emit(std::format("[{}] {}\n", channel, buffer));
 }
 
-ABX_RUNTIME_API [[noreturn]] void AbxNotImplementedAt(const char* library, const char* function, const char* file, int line) {
+ABX_RUNTIME_API void AbxNotImplementedAt [[noreturn]] (const char* library, const char* function, const char* file, int line) {
     Emit(std::format("[anybox] not implemented: {}!{} ({}:{})\n", library, function, file, line));
     AbxStop stop{};
     stop.kind = "not-implemented";
@@ -347,7 +347,7 @@ ABX_RUNTIME_API [[noreturn]] void AbxNotImplementedAt(const char* library, const
     std::abort();
 }
 
-ABX_RUNTIME_API [[noreturn]] void AbxUnsupportedAt(const char* library, const char* function, const char* message, const char* file, int line) {
+ABX_RUNTIME_API void AbxUnsupportedAt [[noreturn]] (const char* library, const char* function, const char* message, const char* file, int line) {
     Emit(std::format("[anybox] unsupported: {}!{}: {} ({}:{})\n", library, function, message, file, line));
     AbxStop stop{};
     stop.kind = "unsupported";

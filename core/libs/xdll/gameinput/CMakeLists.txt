@@ -1,1 +1,1 @@
-anybox_add_xdll(gameinput)
+anybox_add_xdll(gameinput LINK $<$<BOOL:${MSVC}>:gameinput>)

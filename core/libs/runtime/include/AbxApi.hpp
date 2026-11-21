@@ -17,8 +17,8 @@
 inline constexpr int AbxExitNotImplemented = 0xAB01;
 inline constexpr int AbxExitUnsupported = 0xAB02;
 
-ABX_RUNTIME_API [[noreturn]] void AbxNotImplementedAt(const char* library, const char* function, const char* file, int line);
-ABX_RUNTIME_API [[noreturn]] void AbxUnsupportedAt(const char* library, const char* function, const char* message, const char* file, int line);
+ABX_RUNTIME_API void AbxNotImplementedAt [[noreturn]] (const char* library, const char* function, const char* file, int line);
+ABX_RUNTIME_API void AbxUnsupportedAt [[noreturn]] (const char* library, const char* function, const char* message, const char* file, int line);
 ABX_RUNTIME_API void AbxLog(const char* channel, const char* format, ...);
 ABX_RUNTIME_API const char* AbxTitleId();
 ABX_RUNTIME_API const char* AbxTitleName();
