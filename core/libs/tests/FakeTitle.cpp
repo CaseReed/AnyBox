@@ -243,6 +243,10 @@ HRESULT CompleterProvider(std::uint32_t op, const AsyncProviderData* data) {
     return S_OK;
 }
 
+HRESULT IdleProvider(std::uint32_t, const AsyncProviderData*) {
+    return S_OK;
+}
+
 HRESULT ScheduleProvider(std::uint32_t op, const AsyncProviderData* data) {
     return op == OpBegin ? XAsyncSchedule(data->async, 0) : S_OK;
 }
@@ -507,6 +511,13 @@ int AsyncCancel() {
     if (FAILED(XTaskQueueTerminate(manual, true, nullptr, nullptr))) return Fail("terminate with a queued completion");
     if (!stranded.returned || stranded.status != RunResult || stranded.thread != GetCurrentThreadId()) return Fail("completion queued at termination");
     if (XAsyncGetStatus(&strandedBlock, true) != RunResult) return Fail("status after termination");
+
+    AsyncBlock idleBlock{};
+    idleBlock.queue = manual;
+    if (XAsyncBegin(&idleBlock, nullptr, nullptr, nullptr, IdleProvider) != S_OK) return Fail("begin on a terminated queue");
+    if (XAsyncSchedule(&idleBlock, 0) != E_ABORT || XAsyncSchedule(&idleBlock, 0) != E_ABORT) return Fail("schedule twice on a terminated queue");
+    XAsyncComplete(&idleBlock, E_ABORT, 0);
+    if (XAsyncGetStatus(&idleBlock, true) != E_ABORT) return Fail("status after scheduling on a terminated queue");
     XTaskQueueCloseHandle(manual);
     return 0;
 }

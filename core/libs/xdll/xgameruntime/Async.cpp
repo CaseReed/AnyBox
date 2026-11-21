@@ -386,6 +386,10 @@ ABX_API HRESULT XAsyncSchedule(XAsyncBlock* asyncBlock, std::uint32_t delayInMs)
     }
     const HRESULT queued = XTaskQueueSubmitDelayedCallback(call->queue, XTaskQueuePort::Work, delayInMs, call, WorkCallback);
     if (FAILED(queued)) {
+        {
+            std::lock_guard lock(registry.mutex);
+            call->workScheduled = false;
+        }
         Release(call);
     }
     return queued;
