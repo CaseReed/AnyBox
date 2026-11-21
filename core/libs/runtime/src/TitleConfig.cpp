@@ -136,9 +136,9 @@ TitleConfig ParseTitleConfig(std::string_view xml) {
     }
     if (const auto executable = StartTag(xml, "Executable")) {
         config.targetDeviceFamily = Attribute(*executable, "TargetDeviceFamily");
-    }
-    if (config.targetDeviceFamily.empty()) {
-        config.targetDeviceFamily = "XboxOne";
+        if (config.targetDeviceFamily.empty()) {
+            config.targetDeviceFamily = "XboxOne";
+        }
     }
     return config;
 }
@@ -158,9 +158,6 @@ TitleConfig LoadTitleConfig(const std::wstring& path) {
         }
     }
     CloseHandle(file);
-    if (bytes.empty()) {
-        return {};
-    }
     if (bytes.size() >= 2 && static_cast<unsigned char>(bytes[0]) == 0xff && static_cast<unsigned char>(bytes[1]) == 0xfe) {
         return ParseTitleConfig(FromUtf16(bytes));
     }

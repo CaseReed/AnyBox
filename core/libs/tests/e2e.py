@@ -14,15 +14,19 @@ CONFIG = """<?xml version="1.0" encoding="utf-8"?>
 </Game>
 """
 
-EXECUTABLE = '  <ExecutableList>\n    <Executable Name="title.exe" TargetDeviceFamily="{}"/>\n  </ExecutableList>\n'
+def executable_list(family=None):
+    attribute = "" if family is None else f' TargetDeviceFamily="{family}"'
+    return f'  <ExecutableList>\n    <Executable Name="title.exe"{attribute}/>\n  </ExecutableList>\n'
+
 
 DEVICES = {
-    "device_scarlett": (EXECUTABLE.format("Scarlett"), 0x07),
-    "device_xboxone": (EXECUTABLE.format("XboxOne"), 0x04),
-    "device_pc": (EXECUTABLE.format("PC"), 0x01),
-    "device_default": ("", 0x04),
-    "device_none": (None, 0x00),
-    "device_unknown": (EXECUTABLE.format("Desktop"), None),
+    "device_scarlett": (executable_list("Scarlett"), 0x07),
+    "device_xboxone": (executable_list("XboxOne"), 0x04),
+    "device_pc": (executable_list("PC"), 0x01),
+    "device_default": (executable_list(), 0x04),
+    "device_none": (None, None),
+    "device_noexecutable": ("", None),
+    "device_unknown": (executable_list("Desktop"), None),
 }
 
 EXPECTED = {
@@ -33,7 +37,8 @@ EXPECTED = {
     "device_xboxone": (0, "none"),
     "device_pc": (0, "none"),
     "device_default": (0, "none"),
-    "device_none": (0, "none"),
+    "device_none": (0xAB02, "unsupported"),
+    "device_noexecutable": (0xAB02, "unsupported"),
     "device_unknown": (0xAB02, "unsupported"),
 }
 

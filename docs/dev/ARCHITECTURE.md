@@ -81,4 +81,4 @@ flowchart LR
 ## Tests
 
 - [`relinker_tests`](../../core/relinker/tests/RelinkerTests.cpp) build synthetic Xbox PE images in memory ([`SyntheticPe.cpp`](../../core/relinker/tests/SyntheticPe.cpp)) and check routing, unbinding, certificate removal, delay imports, header room and checksums.
-- [`e2e.py`](../../core/libs/tests/e2e.py) takes a real title built against a stand-in console `xgameruntime.dll`, marks it as Xbox subsystem, relinks it, runs it on the AnyBox libraries, and checks its output and run report for a working run, a stub stop and a crash.
+- [`e2e.py`](../../core/libs/tests/e2e.py) takes a real title built against a stand-in console `xgameruntime.dll`, marks it as Xbox subsystem, relinks it, runs it on the AnyBox libraries, and checks its output and run report for a working run, a stub stop, an unsupported stop, a crash and the reported device type.
