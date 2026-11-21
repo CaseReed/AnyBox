@@ -4,17 +4,17 @@ Lists of every function a system DLL exports, so the needs page can show the who
 
 | File | Source | DLLs |
 |---|---|---|
-| [gdk-2610-pc.json](gdk-2610-pc.json) | Microsoft GDK 2610.0.9661, the public PC GDK ([releases](https://github.com/microsoft/GDK/releases)) | `xgameruntime.dll`, `gameinput.dll` |
+| [gdk-2610-pc.json](gdk-2610-pc.json) | GDK 2610.0.9661, the public PC GDK | `xgameruntime.dll`, `gameinput.dll` |
 
 Make one from import libraries (`.lib`, short format) or from DLLs. The public PC GDK needs two adjustments:
 
 - On PC, `xgameruntime.lib` is a static library and `xgameruntime.dll` exports only its loader. The public runtime API is exported by `xgameruntime.thunks.dll`, so read that and record it under the console name with `--rename`.
-- Leave out the extension libraries (PlayFab, Party, GameChat2, libHttpClient, XCurl, the Xbox services thunks). Titles ship those modules themselves, and AnyBox does not replace them.
+- Leave out the extension libraries (PlayFab, Party, GameChat2, libHttpClient, XCurl, the XSAPI thunks). Titles ship those modules themselves, and AnyBox does not replace them.
 
-The GDK zip holds MSI packages. Extract them without installing: `msiexec /a "<package>.msi" TARGETDIR="<folder>" /qn`. Then:
+The GDK zip holds MSI packages. Extract them without installing: `msiexec /a "<package>.msi" TARGETDIR="<folder>" /qn`. Then, with `<gdk>` the GDK folder inside `<folder>`:
 
 ```
-python tools/lib_inventory.py "<folder>\Microsoft GDK\<version>\windows\bin\x64\xgameruntime.thunks.dll" "<folder>\Microsoft GDK\<version>\windows\lib\x64\GameInput.lib" --rename xgameruntime.thunks.dll=xgameruntime.dll --label "Microsoft GDK <version> (public PC GDK)" --json docs/inventory/gdk-<version>-pc.json
+python tools/lib_inventory.py "<gdk>\<version>\windows\bin\x64\xgameruntime.thunks.dll" "<gdk>\<version>\windows\lib\x64\GameInput.lib" --rename xgameruntime.thunks.dll=xgameruntime.dll --label "GDK <version> (public PC GDK)" --json docs/inventory/gdk-<version>-pc.json
 ```
 
 Console-only libraries (`d3d12_x`, `kernelx` and the rest) come with the licensed GXDK, not the public GDK. Their surface comes from title audits until someone with access adds an inventory.

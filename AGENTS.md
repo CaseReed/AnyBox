@@ -1,6 +1,6 @@
 # AGENTS.md
 
-AnyBox relinks GDK (Xbox One / Xbox Series) PE32+ executables into Windows programs that load reimplemented system DLLs. It is not an emulator. The rules are [CONTRIBUTING.md](CONTRIBUTING.md) and [CONVENTIONS](docs/dev/CONVENTIONS.md); these are the ones agents break.
+AnyBox relinks GDK console PE32+ executables into Windows programs that load reimplemented system DLLs. It is not an emulator. The rules are [CONTRIBUTING.md](CONTRIBUTING.md) and [CONVENTIONS](docs/dev/CONVENTIONS.md); these are the ones agents break.
 
 - No comments in code, except `#endif`, namespace ends, and the licence and copyright notice of code adapted from an upstream source. Known gaps go in `docs/dev/debt/<library>.md` through a fragment.
 - An export you cannot implement calls `AbxNotImplemented(__func__)`. A path whose behaviour is unknown calls `AbxUnsupported(__func__, "what is unknown")`. Never return a made-up success.

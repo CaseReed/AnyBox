@@ -63,11 +63,11 @@ void TestRename() {
 
 void TestSubsystem() {
     const auto result = ConvertSpec(Title());
-    Check(result.subsystemBefore == pe::SubsystemXbox, "input is an Xbox image");
-    Check(pe::Parse(result.bytes).subsystem == pe::SubsystemWindowsGui, "Xbox subsystem becomes Windows GUI");
+    Check(result.subsystemBefore == pe::SubsystemConsole, "input is a console image");
+    Check(pe::Parse(result.bytes).subsystem == pe::SubsystemWindowsGui, "console subsystem becomes Windows GUI");
     auto spec = Title();
     spec.subsystem = 1;
-    Check(ExpectError([&] { ConvertSpec(spec); }).find("neither Xbox nor Windows") != std::string::npos, "native subsystem needs an explicit choice");
+    Check(ExpectError([&] { ConvertSpec(spec); }).find("neither console nor Windows") != std::string::npos, "native subsystem needs an explicit choice");
 }
 
 void TestConsole() {
@@ -169,7 +169,7 @@ void TestRegistry() {
     Check(json.find("\"name\": \"Quote\\\"d\"") != std::string::npos, "quotes are escaped");
     Check(json.find("\"ordinal\": 3") != std::string::npos, "ordinals are listed");
     Check(json.find("\"kind\": \"unknown\"") != std::string::npos, "unknown DLLs are listed");
-    Check(json.find("\"before\": \"xbox\", \"after\": \"windows-gui\"") != std::string::npos, "subsystem change is listed");
+    Check(json.find("\"before\": \"console\", \"after\": \"windows-gui\"") != std::string::npos, "subsystem change is listed");
 }
 
 void TestOrdinal() {

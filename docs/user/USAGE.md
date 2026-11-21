@@ -13,7 +13,7 @@ anybox-relinker --libs build/libs --module-dir . --registry <package>\game.exe <
 | `--libs <dir>` | copy the AnyBox DLLs the output needs (from `build/libs`) beside it |
 | `--module-dir <dir>` | also convert every `.dll` under `<dir>` (relative to the package); repeat for each folder of title DLLs; `.` converts those beside the executable |
 | `--registry` | write `<file>.registry.json` with every import and where it is routed |
-| `--console` / `--gui` | choose the Windows subsystem (Xbox images become GUI by default) |
+| `--console` / `--gui` | choose the Windows subsystem (console images become GUI by default) |
 | `--allow-unknown` | keep imports from DLLs nothing provides instead of failing |
 | `--list-imports` | print the imports and their routes, write nothing |
 | `--print-map` | print the DLL routing table |

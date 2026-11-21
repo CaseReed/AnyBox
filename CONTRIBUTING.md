@@ -16,7 +16,7 @@ Search open pull requests for the function name before you start, so two people 
 
 | You want to | Do this |
 |---|---|
-| Implement a stub | Replace the `AbxNotImplemented(__func__)` body with the real behaviour, give the declaration its real signature, and add a test. Keep an exact signature from the public GDK headers; do not copy Microsoft's headers into the repository. |
+| Implement a stub | Replace the `AbxNotImplemented(__func__)` body with the real behaviour, give the declaration its real signature, and add a test. Keep an exact signature from the public GDK headers; do not copy the GDK headers into the repository. |
 | Use the host's implementation unchanged | Add `Name=hostdll.Name` to the library's `Forwards.def` and remove its stub. Only when the console and desktop contracts match; record any doubt in debt. |
 | Serve an import by ordinal | Add `<Name> @<ordinal>` to the library's `Ordinals.txt`. CMake pins the export at that ordinal, and the relinker refuses a title that imports an ordinal no library pins. |
 | Add imports a title needs | `python tools/import_audit.py <package> --json audit.json` then `python tools/stubgen.py --from-audit audit.json`. Commit the generated stubs, declarations and debt fragment. |
@@ -31,7 +31,7 @@ Search open pull requests for the function name before you start, so two people 
 - Implement the general behaviour of a function, not what one title happens to need. Never branch on a title ID, path or value from one trace.
 - Missing imports fail at conversion or start-up with a clear error; never add fallbacks that keep running.
 - Every `ABX_API` export has exactly one declaration in a header under its library's `include/`. `tools/check_conventions.py` checks this.
-- Don't replace modules that titles ship themselves (engine and middleware DLLs, Xbox Services thunks). Only system libraries are reimplemented.
+- Don't replace modules that titles ship themselves (engine and middleware DLLs, XSAPI thunks). Only system libraries are reimplemented.
 - Behaviour taken from a public header or documentation says so in the PR. Behaviour not checked against a console is recorded in debt.
 - Third-party code is a git submodule under `3rdparty/`, built from source with CMake.
 - Tests finish in 30 s each.

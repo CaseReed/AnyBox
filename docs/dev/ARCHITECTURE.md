@@ -7,7 +7,7 @@ How a GDK executable becomes a Windows program. Nothing is emulated: the convert
 ```mermaid
 flowchart LR
     subgraph input["GDK title (decrypted)"]
-        exe["game.exe (PE32+, subsystem Xbox)"]
+        exe["game.exe (PE32+, console subsystem)"]
         dlls["bundled *.dll"]
         cfg["MicrosoftGame.config"]
     end
@@ -16,7 +16,7 @@ flowchart LR
         direction TB
         parse["PeImage: parse headers,<br/>imports, delay imports"]
         route["LibraryMap: route each DLL<br/>bundled / library / host / unknown"]
-        write["Conversion: rename routed DLLs,<br/>unbind, drop certificate,<br/>Xbox → Windows subsystem, checksum"]
+        write["Conversion: rename routed DLLs,<br/>unbind, drop certificate,<br/>console → Windows subsystem, checksum"]
         parse --> route --> write
     end
 
@@ -43,7 +43,7 @@ flowchart LR
 ## Why this works for GDK
 
 - GDK titles are x86-64 PE32+ images, the format the Windows loader already reads. There is no instruction translation and no ABI thunking: Windows x64 has one calling convention, and console and PC code both use it.
-- What differs is the environment: the subsystem field (`IMAGE_SUBSYSTEM_XBOX`, 14), the console-only system DLLs the title imports (XGameRuntime, D3D12.X, kernelx and others), and the hardware behind them.
+- What differs is the environment: the subsystem field (14, the console subsystem), the console-only system DLLs the title imports (XGameRuntime, D3D12.X, kernelx and others), and the hardware behind them.
 
 ## Relinker
 
@@ -81,5 +81,5 @@ flowchart LR
 
 ## Tests
 
-- [`relinker_tests`](../../core/relinker/tests/RelinkerTests.cpp) build synthetic Xbox PE images in memory ([`SyntheticPe.cpp`](../../core/relinker/tests/SyntheticPe.cpp)) and check routing, unbinding, certificate removal, delay imports, header room and checksums.
-- [`e2e.py`](../../core/libs/tests/e2e.py) takes a real title built against a stand-in console `xgameruntime.dll`, marks it as Xbox subsystem, relinks it, runs it on the AnyBox libraries, and checks its output and run report for a working task queue run, XAsync calls (run, wait, provider ops, results, cancellation, a terminated queue and a null block), XGameSave containers and blobs written, read, enumerated and deleted in a per-title folder, a stub stop, an unsupported stop, a crash and the reported device type.
+- [`relinker_tests`](../../core/relinker/tests/RelinkerTests.cpp) build synthetic console PE images in memory ([`SyntheticPe.cpp`](../../core/relinker/tests/SyntheticPe.cpp)) and check routing, unbinding, certificate removal, delay imports, header room and checksums.
+- [`e2e.py`](../../core/libs/tests/e2e.py) takes a real title built against a stand-in console `xgameruntime.dll`, marks it with the console subsystem, relinks it, runs it on the AnyBox libraries, and checks its output and run report for a working task queue run, XAsync calls (run, wait, provider ops, results, cancellation, a terminated queue and a null block), XGameSave containers and blobs written, read, enumerated and deleted in a per-title folder, a stub stop, an unsupported stop, a crash and the reported device type.

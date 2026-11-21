@@ -35,10 +35,10 @@ void Usage() {
     std::cout <<
         "Usage: anybox-relinker [options] <input.exe> <output.exe>\n"
         "\n"
-        "Converts a decrypted GDK (Xbox One / Xbox Series) PE32+ executable into a\n"
+        "Converts a decrypted GDK console PE32+ executable into a\n"
         "Windows program that loads AnyBox's reimplemented system libraries.\n"
         "\n"
-        "  --gui                 Windows GUI subsystem (default for Xbox images)\n"
+        "  --gui                 Windows GUI subsystem (default for console images)\n"
         "  --console             Windows console subsystem\n"
         "  --module-dir <dir>    Convert every .dll under <dir> (relative to the input's\n"
         "                        folder) into the same place beside the output; repeatable\n"

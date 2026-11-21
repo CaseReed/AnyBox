@@ -1,7 +1,7 @@
 {
  "format": "anybox-inventory",
  "version": 1,
- "label": "Microsoft GDK 2610.0.9661 (public PC GDK): xgameruntime.thunks.dll exports, GameInput.lib",
+ "label": "GDK 2610.0.9661 (public PC GDK): xgameruntime.thunks.dll exports, GameInput.lib",
  "dlls": {
   "gameinput.dll": [
    "GameInputCreate"

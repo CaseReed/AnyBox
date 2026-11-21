@@ -335,7 +335,7 @@ std::string SubsystemName(std::uint16_t subsystem) {
     case 1: return "native";
     case SubsystemWindowsGui: return "windows-gui";
     case SubsystemWindowsCui: return "windows-cui";
-    case SubsystemXbox: return "xbox";
+    case SubsystemConsole: return "console";
     default: return std::format("subsystem-{}", subsystem);
     }
 }

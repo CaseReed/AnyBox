@@ -116,7 +116,7 @@ def coverage(inventory, libraries):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="List every export of DLLs or import libraries (.lib), for example an installed Microsoft GDK, and compare them with what AnyBox declares.")
+        description="List every export of DLLs or import libraries (.lib), for example an installed GDK, and compare them with what AnyBox declares.")
     parser.add_argument("paths", nargs="+", type=Path, help=".lib or .dll files, or folders searched recursively")
     parser.add_argument("--json", type=Path, help="write the inventory (docs/inventory/<name>.json) for tools/needs.py")
     parser.add_argument("--label", default="", help="where the inventory came from, for example 'GDK 2410 GRDK'")

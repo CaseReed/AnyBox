@@ -131,13 +131,13 @@ std::uint16_t ChooseSubsystem(std::uint16_t current, TargetSubsystem target) {
     case TargetSubsystem::Console: return pe::SubsystemWindowsCui;
     case TargetSubsystem::Keep: break;
     }
-    if (current == pe::SubsystemXbox) {
+    if (current == pe::SubsystemConsole) {
         return pe::SubsystemWindowsGui;
     }
     if (current == pe::SubsystemWindowsGui || current == pe::SubsystemWindowsCui) {
         return current;
     }
-    throw PeError(std::format("subsystem {} is neither Xbox nor Windows; choose one with --gui or --console", pe::SubsystemName(current)));
+    throw PeError(std::format("subsystem {} is neither console nor Windows; choose one with --gui or --console", pe::SubsystemName(current)));
 }
 
 }

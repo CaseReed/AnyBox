@@ -1,8 +1,8 @@
 # AnyBox
 
-Tool for porting Xbox One / Xbox Series (GDK) executables to Windows PCs, by relinking them against reimplemented system libraries.
+Tool for porting GDK console executables to Windows PCs, by relinking them against reimplemented system libraries.
 
-No emulation and no separate runtime process. A GDK title is already an x86-64 PE program. The [relinker](core/relinker) points its imports at AnyBox's own DLLs ([core/libs/xdll](core/libs/xdll)) and switches the Xbox subsystem to a Windows one. The converted program then runs as an ordinary Windows process.
+No emulation and no separate runtime process. A GDK title is already an x86-64 PE program. The [relinker](core/relinker) points its imports at AnyBox's own DLLs ([core/libs/xdll](core/libs/xdll)) and switches the console subsystem to a Windows one. The converted program then runs as an ordinary Windows process.
 
 [Usage](docs/user/USAGE.md) · [Build](docs/dev/BUILD.md) · [Architecture](docs/dev/ARCHITECTURE.md) · [Contributing](CONTRIBUTING.md) · [Conventions](docs/dev/CONVENTIONS.md) · [Technical debt](docs/dev/TechnicalDebt.md) · [Progress tracking](docs/dev/PROGRESS.md) · [Game testing](docs/dev/GAME_TESTING.md)
 
@@ -43,9 +43,9 @@ Per-title status lives in the **Game bring-up** discussions, one thread per titl
 
 This project is intended for interoperability, research, preservation and compatibility. It does not include, distribute or require copyrighted software, firmware, cryptographic keys or proprietary libraries, and it does not decrypt or unpack protected packages. It works only on executables the user has already obtained in plain form, in accordance with applicable laws and license terms.
 
-AnyBox is an independent project. It is not affiliated with, authorized or endorsed by Microsoft. "Xbox", "Xbox One" and "Xbox Series X|S" are trademarks of the Microsoft group of companies.
+AnyBox is an independent project. It is not affiliated with, authorized or endorsed by any platform holder. All trademarks belong to their respective owners.
 
-AnyBox is built to be like [AnyPS5](https://github.com/boykopovar/AnyPS5), for Xbox.
+AnyBox is built to be like [AnyPS5](https://github.com/boykopovar/AnyPS5), for GDK titles.
 
 ## License
 

@@ -18,7 +18,7 @@ inline constexpr std::uint16_t MachineAmd64 = 0x8664;
 inline constexpr std::uint16_t MagicPe32Plus = 0x20b;
 inline constexpr std::uint16_t SubsystemWindowsGui = 2;
 inline constexpr std::uint16_t SubsystemWindowsCui = 3;
-inline constexpr std::uint16_t SubsystemXbox = 14;
+inline constexpr std::uint16_t SubsystemConsole = 14;
 inline constexpr std::uint16_t CharacteristicDll = 0x2000;
 
 enum Directory : std::size_t {

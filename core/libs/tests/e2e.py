@@ -22,7 +22,7 @@ def executable_list(family=None):
 
 DEVICES = {
     "device_scarlett": (executable_list("Scarlett"), 0x07),
-    "device_xboxone": (executable_list("XboxOne"), 0x04),
+    "device_durango": (executable_list("XboxOne"), 0x04),
     "device_pc": (executable_list("PC"), 0x01),
     "device_default": (executable_list(), 0x04),
     "device_none": (None, None),
@@ -37,7 +37,7 @@ EXPECTED = {
     "crash_chained": (0xC0000005, "crash"),
     "crash_recovered": (0, "none"),
     "device_scarlett": (0, "none"),
-    "device_xboxone": (0, "none"),
+    "device_durango": (0, "none"),
     "device_pc": (0, "none"),
     "device_default": (0, "none"),
     "device_none": (0xAB02, "unsupported"),
@@ -72,7 +72,7 @@ def subsystem_offset(data):
     return struct.unpack_from("<I", data, 0x3C)[0] + 24 + 68
 
 
-def set_xbox_subsystem(path):
+def set_console_subsystem(path):
     data = bytearray(path.read_bytes())
     struct.pack_into("<H", data, subsystem_offset(data), 14)
     path.write_bytes(bytes(data))
@@ -98,7 +98,7 @@ def main():
     package.mkdir(parents=True)
     title = package / "title.exe"
     shutil.copyfile(args.title, title)
-    set_xbox_subsystem(title)
+    set_console_subsystem(title)
     executable, device = DEVICES.get(args.scenario, ("", None))
     config = None if executable is None else CONFIG.replace("  <ShellVisuals", executable + "  <ShellVisuals")
     if config is not None:
