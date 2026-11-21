@@ -34,6 +34,7 @@ EXPECTED = {
     "taskqueue": (0, "none"),
     "stub": (0xAB01, "not-implemented"),
     "crash": (0xC0000005, "crash"),
+    "crash_chained": (0xC0000005, "crash"),
     "device_scarlett": (0, "none"),
     "device_xboxone": (0, "none"),
     "device_pc": (0, "none"),
@@ -132,6 +133,8 @@ def main():
         assert "async ok" in run.stdout
     if args.scenario == "startup":
         assert "startup ok" in run.stdout
+    if args.scenario == "crash_chained":
+        assert run.stdout.count("title filter") == 1, run.stdout
     if args.scenario == "gamesave":
         assert "gamesave ok" in run.stdout
         saves = local / "AnyBox" / "1234ABCD" / "XGameSave"
@@ -140,9 +143,6 @@ def main():
         assert f"device type {device} packaged 0" in run.stdout, run.stdout
 
     report_path = out / "anybox-report.json"
-    if kind == "crash" and not report_path.exists():
-        print("SKIP crash report check: no report written (see docs/dev/debt/runtime.md)")
-        return
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["format"] == "anybox-report" and report["version"] == 1
     assert report["stop"]["kind"] == kind, report["stop"]

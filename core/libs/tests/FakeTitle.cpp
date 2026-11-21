@@ -123,6 +123,14 @@ void Terminated(void*) {
     g_terminated = true;
 }
 
+LPTOP_LEVEL_EXCEPTION_FILTER g_titleFilter = nullptr;
+
+LONG WINAPI ChainingFilter(EXCEPTION_POINTERS* pointers) {
+    std::fputs("title filter\n", stdout);
+    std::fflush(stdout);
+    return g_titleFilter != nullptr ? g_titleFilter(pointers) : EXCEPTION_CONTINUE_SEARCH;
+}
+
 int Fail(const char* what) {
     std::printf("FAIL %s\n", what);
     return 1;
@@ -936,6 +944,13 @@ int main(int argc, char** argv) {
     }
     if (std::strcmp(scenario, "crash") == 0) {
         XGameRuntimeInitialize();
+        volatile int* null = nullptr;
+        *null = 1;
+        return Fail("crash returned");
+    }
+    if (std::strcmp(scenario, "crash_chained") == 0) {
+        XGameRuntimeInitialize();
+        g_titleFilter = SetUnhandledExceptionFilter(ChainingFilter);
         volatile int* null = nullptr;
         *null = 1;
         return Fail("crash returned");

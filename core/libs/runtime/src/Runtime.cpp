@@ -270,7 +270,18 @@ void Emit(const std::string& line) {
     }
 }
 
+std::atomic<LPTOP_LEVEL_EXCEPTION_FILTER> g_previousFilter{};
+std::atomic<bool> g_inFilter{};
+std::atomic<DWORD> g_handledThread{};
+
 LONG WINAPI UnhandledException(EXCEPTION_POINTERS* pointers) {
+    if (g_inFilter.exchange(true)) {
+        return EXCEPTION_CONTINUE_SEARCH;
+    }
+    if (g_handledThread.load() == GetCurrentThreadId()) {
+        g_inFilter.store(false);
+        return EXCEPTION_CONTINUE_SEARCH;
+    }
     const EXCEPTION_RECORD* record = pointers != nullptr ? pointers->ExceptionRecord : nullptr;
     AbxStop stop{};
     stop.kind = "crash";
@@ -283,6 +294,21 @@ LONG WINAPI UnhandledException(EXCEPTION_POINTERS* pointers) {
         }
     }
     AbxWriteReport(&stop);
+    const LPTOP_LEVEL_EXCEPTION_FILTER previous = g_previousFilter.load();
+    const LONG result = previous != nullptr ? previous(pointers) : EXCEPTION_CONTINUE_SEARCH;
+    g_handledThread.store(GetCurrentThreadId());
+    g_inFilter.store(false);
+    return result;
+}
+
+LONG WINAPI KeepFilter(EXCEPTION_POINTERS*) {
+    if (!g_inFilter.load() && g_handledThread.load() == GetCurrentThreadId()) {
+        g_handledThread.store(0);
+    }
+    const LPTOP_LEVEL_EXCEPTION_FILTER previous = SetUnhandledExceptionFilter(UnhandledException);
+    if (previous != UnhandledException) {
+        g_previousFilter.store(previous);
+    }
     return EXCEPTION_CONTINUE_SEARCH;
 }
 
@@ -293,6 +319,7 @@ void Start() {
         g_logFile = std::fopen(logPath.c_str(), "a");
     }
     SetUnhandledExceptionFilter(UnhandledException);
+    AddVectoredExceptionHandler(0, KeepFilter);
 }
 
 }
