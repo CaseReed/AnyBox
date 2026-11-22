@@ -228,7 +228,7 @@ std::vector<CompileOutcome> CompileComputeBatch(const VulkanDevice& device, cons
         }
     };
     std::atomic<std::size_t> next{0};
-    const unsigned workers = std::max(1u, std::min<unsigned>(options.workers, static_cast<unsigned>(std::max<std::size_t>(shared.size(), 1))));
+    const unsigned workers = (std::max)(1u, std::min<unsigned>(options.workers, static_cast<unsigned>(std::max<std::size_t>(shared.size(), 1))));
     std::vector<std::thread> pool;
     for (unsigned worker = 0; worker < workers; ++worker) {
         pool.emplace_back([&] {
