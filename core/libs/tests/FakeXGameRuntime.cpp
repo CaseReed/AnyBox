@@ -14,6 +14,12 @@ __declspec(dllexport) HRESULT XTaskQueueTerminate(void*, bool, void*, void*) { r
 __declspec(dllexport) void XTaskQueueCloseHandle(void*) {}
 __declspec(dllexport) bool XTaskQueueGetCurrentProcessTaskQueue(void**) { return false; }
 __declspec(dllexport) void XTaskQueueSetCurrentProcessTaskQueue(void*) {}
+__declspec(dllexport) HRESULT XTaskQueueCreateComposite(void*, void*, void**) { return E_FAIL; }
+__declspec(dllexport) HRESULT XTaskQueueGetPort(void*, std::uint32_t, void**) { return E_FAIL; }
+__declspec(dllexport) HRESULT XTaskQueueRegisterMonitor(void*, void*, void*, void*) { return E_FAIL; }
+__declspec(dllexport) void XTaskQueueUnregisterMonitor(void*, std::uint64_t) {}
+__declspec(dllexport) HRESULT XTaskQueueRegisterWaiter(void*, std::uint32_t, void*, void*, void*, void*) { return E_FAIL; }
+__declspec(dllexport) void XTaskQueueUnregisterWaiter(void*, std::uint64_t) {}
 __declspec(dllexport) HRESULT XAsyncBegin(void*, void*, const void*, const char*, void*) { return E_FAIL; }
 __declspec(dllexport) HRESULT XAsyncSchedule(void*, std::uint32_t) { return E_FAIL; }
 __declspec(dllexport) void XAsyncComplete(void*, HRESULT, std::size_t) {}

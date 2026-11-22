@@ -1,11 +1,5 @@
 #include "xdll/xgameruntime/xgameruntime.hpp"
 
-ABX_API HRESULT XTaskQueueCreateComposite() { AbxNotImplemented(__func__); }
-ABX_API HRESULT XTaskQueueGetPort() { AbxNotImplemented(__func__); }
-ABX_API HRESULT XTaskQueueRegisterMonitor() { AbxNotImplemented(__func__); }
-ABX_API HRESULT XTaskQueueUnregisterMonitor() { AbxNotImplemented(__func__); }
-ABX_API HRESULT XTaskQueueRegisterWaiter() { AbxNotImplemented(__func__); }
-ABX_API HRESULT XTaskQueueUnregisterWaiter() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XUserAddAsync() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XUserAddResult() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XUserCloseHandle() { AbxNotImplemented(__func__); }
