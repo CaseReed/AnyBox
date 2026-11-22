@@ -20,6 +20,14 @@ anybox-relinker --libs build/libs --module-dir . --registry <package>\game.exe <
 
 Then copy the rest of the package (data folders and `MicrosoftGame.config`) into `<out>`. The relinker prints the expected layout.
 
+## Convert and run in one step
+
+```
+python tools/launch_title.py <package> <out> --build-dir build
+```
+
+checks that the executable named in `MicrosoftGame.config` is a decrypted PE32+ x64 image, converts it with `--module-dir` for every folder holding DLLs, hard-links (or copies) the rest of the package into `<out>` except `.xvd` containers, starts the program with `ANYBOX_LOG_FILE=<out>\anybox.log`, and prints the run report summary. `--exe <path>` picks the executable when the config lists several, `--console` uses the console subsystem, and `--no-run` stops after converting.
+
 ## Before converting: audit
 
 ```
