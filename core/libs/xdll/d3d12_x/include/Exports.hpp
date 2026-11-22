@@ -3,11 +3,12 @@
 #include "AbxApi.hpp"
 
 #include <windows.h>
+#include <d3d12.h>
 
 ABX_API HRESULT D3D12XboxCreateDevice();
-ABX_API HRESULT D3D12CreateDevice();
-ABX_API HRESULT D3D12GetDebugInterface();
-ABX_API HRESULT D3D12SerializeRootSignature();
-ABX_API HRESULT D3D12SerializeVersionedRootSignature();
-ABX_API HRESULT D3D12CreateRootSignatureDeserializer();
-ABX_API HRESULT D3D12CreateVersionedRootSignatureDeserializer();
+ABX_API HRESULT D3D12CreateDevice(IUnknown* adapter, D3D_FEATURE_LEVEL minimumFeatureLevel, REFIID iid, void** device);
+ABX_API HRESULT D3D12GetDebugInterface(REFIID iid, void** debug);
+ABX_API HRESULT D3D12SerializeRootSignature(const D3D12_ROOT_SIGNATURE_DESC* rootSignature, D3D_ROOT_SIGNATURE_VERSION version, ID3DBlob** blob, ID3DBlob** errorBlob);
+ABX_API HRESULT D3D12SerializeVersionedRootSignature(const D3D12_VERSIONED_ROOT_SIGNATURE_DESC* rootSignature, ID3DBlob** blob, ID3DBlob** errorBlob);
+ABX_API HRESULT D3D12CreateRootSignatureDeserializer(const void* data, SIZE_T size, REFIID iid, void** deserializer);
+ABX_API HRESULT D3D12CreateVersionedRootSignatureDeserializer(const void* data, SIZE_T size, REFIID iid, void** deserializer);
