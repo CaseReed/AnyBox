@@ -53,10 +53,10 @@ int SelfTest() {
     if (ContainerSize(container.data(), 16)) return Fail("shorter than a header");
     container[0] = 'X';
     if (ContainerSize(container.data(), container.size())) return Fail("magic");
-    std::vector<unsigned char> small = Container(32);
+    std::vector<unsigned char> undersized = Container(32);
     const std::uint32_t tiny = 8;
-    std::memcpy(small.data() + 24, &tiny, sizeof(tiny));
-    if (ContainerSize(small.data(), small.size())) return Fail("size field below a header");
+    std::memcpy(undersized.data() + 24, &tiny, sizeof(tiny));
+    if (ContainerSize(undersized.data(), undersized.size())) return Fail("size field below a header");
     std::puts("self test ok");
     return 0;
 }

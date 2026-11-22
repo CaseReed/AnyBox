@@ -24,7 +24,7 @@ std::optional<std::uint64_t> FindFreeRange(std::uint64_t bytes, std::uint64_t al
         }
         const std::uint64_t regionStart = reinterpret_cast<std::uint64_t>(info.BaseAddress);
         const std::uint64_t regionEnd = regionStart + info.RegionSize;
-        if (info.State == MEM_FREE && std::min(regionEnd, end) - cursor >= bytes) {
+        if (info.State == MEM_FREE && (std::min)(regionEnd, end) - cursor >= bytes) {
             return cursor;
         }
         cursor = AlignUp(regionEnd, alignment);
