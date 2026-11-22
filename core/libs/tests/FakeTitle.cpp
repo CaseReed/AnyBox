@@ -45,6 +45,10 @@ struct SaveBlob {
     std::uint8_t* data;
 };
 
+struct RegistrationToken {
+    std::uint64_t token;
+};
+
 extern "C" {
 __declspec(dllimport) HRESULT XAsyncBegin(AsyncBlock* async, void* context, const void* identity, const char* identityName, AsyncProvider provider);
 __declspec(dllimport) HRESULT XAsyncSchedule(AsyncBlock* async, std::uint32_t delayMs);
@@ -64,6 +68,12 @@ __declspec(dllimport) HRESULT XTaskQueueTerminate(void* queue, bool wait, void* 
 __declspec(dllimport) void XTaskQueueCloseHandle(void* queue);
 __declspec(dllimport) bool XTaskQueueGetCurrentProcessTaskQueue(void** queue);
 __declspec(dllimport) void XTaskQueueSetCurrentProcessTaskQueue(void* queue);
+__declspec(dllimport) HRESULT XTaskQueueCreateComposite(void* workPort, void* completionPort, void** queue);
+__declspec(dllimport) HRESULT XTaskQueueGetPort(void* queue, std::uint32_t port, void** portHandle);
+__declspec(dllimport) HRESULT XTaskQueueRegisterMonitor(void* queue, void* context, void (*callback)(void*, void*, std::uint32_t), RegistrationToken* token);
+__declspec(dllimport) void XTaskQueueUnregisterMonitor(void* queue, RegistrationToken token);
+__declspec(dllimport) HRESULT XTaskQueueRegisterWaiter(void* queue, std::uint32_t port, HANDLE waitHandle, void* context, void (*callback)(void*, bool), RegistrationToken* token);
+__declspec(dllimport) void XTaskQueueUnregisterWaiter(void* queue, RegistrationToken token);
 __declspec(dllimport) HRESULT XUserAddAsync();
 __declspec(dllimport) std::uint32_t XSystemGetDeviceType();
 __declspec(dllimport) bool XPackageIsPackagedProcess();
@@ -893,6 +903,510 @@ int GameSave() {
     return 0;
 }
 
+struct Monitored {
+    std::atomic<int> work{0};
+    std::atomic<int> completion{0};
+    std::atomic<std::uint32_t> last{0xffffffffu};
+    std::atomic<void*> queue{nullptr};
+    HANDLE called = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    Monitored() = default;
+    Monitored(const Monitored&) = delete;
+    Monitored& operator=(const Monitored&) = delete;
+    ~Monitored() { CloseHandle(called); }
+};
+
+void Monitor(void* context, void* queue, std::uint32_t port) {
+    auto* seen = static_cast<Monitored*>(context);
+    (port == 0 ? seen->work : seen->completion).fetch_add(1);
+    seen->last = port;
+    seen->queue = queue;
+    SetEvent(seen->called);
+}
+
+bool AwaitCount(Monitored& seen, const std::atomic<int>& count, int expected) {
+    while (count < expected) {
+        if (WaitForSingleObject(seen.called, 10000) != WAIT_OBJECT_0) return false;
+    }
+    return count == expected;
+}
+
+constexpr HRESULT InvalidHandle = static_cast<HRESULT>(0x8924010Cu);
+
+struct Ordered {
+    Monitored seen;
+    std::atomic<int> monitorFirst{0};
+    std::atomic<int> runs{0};
+};
+
+void CheckMonitored(void* context, bool) {
+    auto* ordered = static_cast<Ordered*>(context);
+    if (ordered->seen.work == ordered->runs.fetch_add(1) + 1) ordered->monitorFirst.fetch_add(1);
+}
+
+void* g_reentryQueue = nullptr;
+void* g_otherQueue = nullptr;
+
+void TerminateOwnQueue(void*, bool) {
+    XTaskQueueDispatch(g_otherQueue, 0, 0);
+    XTaskQueueTerminate(g_reentryQueue, true, nullptr, nullptr);
+}
+
+struct Churn {
+    void* source = nullptr;
+    void* port = nullptr;
+    std::atomic<bool> stop{false};
+    std::atomic<int> failures{0};
+};
+
+struct Tally {
+    std::atomic<int> ran{0};
+    std::atomic<int> canceled{0};
+    HANDLE signaled = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+};
+
+void Record(void* context, bool canceled) {
+    auto* tally = static_cast<Tally*>(context);
+    (canceled ? tally->canceled : tally->ran).fetch_add(1);
+    SetEvent(tally->signaled);
+}
+
+int Guarded(const char* name, int (*scenario)()) {
+    HANDLE finished = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+    std::thread watchdog([finished, name] {
+        if (WaitForSingleObject(finished, WatchdogMs) != WAIT_OBJECT_0) {
+            std::printf("FAIL %s scenario blocked for %lu ms\n", name, WatchdogMs);
+            std::fflush(stdout);
+            TerminateProcess(GetCurrentProcess(), 1);
+        }
+    });
+    const int result = scenario();
+    SetEvent(finished);
+    watchdog.join();
+    CloseHandle(finished);
+    return result;
+}
+
+int Composite() {
+    void* queue = nullptr;
+    if (FAILED(XTaskQueueCreate(0, 0, &queue))) return Fail("composite source queue");
+    void* port = nullptr;
+    if (XTaskQueueGetPort(queue, 0, nullptr) != E_POINTER) return Fail("get port without output");
+    if (XTaskQueueGetPort(queue, 2, &port) != E_INVALIDARG) return Fail("get port of an invalid port");
+    if (FAILED(XTaskQueueGetPort(queue, 0, &port)) || port == nullptr) return Fail("get work port");
+    if (XTaskQueueCreateComposite(port, port, nullptr) != E_POINTER) return Fail("composite without output");
+    void* composite = nullptr;
+    if (FAILED(XTaskQueueCreateComposite(port, port, &composite))) return Fail("create composite");
+    void* compositePort = nullptr;
+    if (FAILED(XTaskQueueGetPort(composite, 1, &compositePort)) || compositePort != port) return Fail("composite completion port is the source work port");
+
+    Tally tally;
+    if (FAILED(XTaskQueueSubmitCallback(composite, 1, &tally, Record))) return Fail("submit composite completion");
+    if (XTaskQueueDispatch(queue, 1, 0)) return Fail("source completion port received composite work");
+    if (!XTaskQueueDispatch(queue, 0, 0) || tally.ran != 1) return Fail("source work port runs composite completion");
+
+    Monitored source;
+    Monitored joined;
+    RegistrationToken sourceToken{};
+    RegistrationToken joinedToken{};
+    if (XTaskQueueRegisterMonitor(queue, nullptr, nullptr, &sourceToken) != E_POINTER) return Fail("monitor without callback");
+    if (XTaskQueueRegisterMonitor(queue, nullptr, Monitor, nullptr) != E_POINTER) return Fail("monitor without token");
+    if (FAILED(XTaskQueueRegisterMonitor(queue, &source, Monitor, &sourceToken))) return Fail("register source monitor");
+    if (FAILED(XTaskQueueRegisterMonitor(composite, &joined, Monitor, &joinedToken))) return Fail("register composite monitor");
+    XTaskQueueSubmitCallback(composite, 1, &tally, Record);
+    if (source.work != 1 || source.completion != 0) return Fail("source monitor sees its work port");
+    if (joined.work != 1 || joined.completion != 1 || joined.last != 1) return Fail("composite monitor sees both of its ports");
+    if (!XTaskQueueDispatch(source.queue.load(), 0, 0) || tally.ran != 2) return Fail("dispatch through the monitor's queue handle");
+    const ULONGLONG submitted = GetTickCount64();
+    XTaskQueueSubmitDelayedCallback(queue, 0, 300, &tally, Record);
+    if (source.work != 1 && GetTickCount64() - submitted < 300) return Fail("monitor called before the delay elapsed");
+    if (!XTaskQueueDispatch(queue, 0, 10000)) return Fail("delayed composite dispatch");
+    if (!AwaitCount(source, source.work, 2) || !AwaitCount(joined, joined.work, 2)) return Fail("monitor called when delayed work is queued");
+    XTaskQueueUnregisterMonitor(composite, joinedToken);
+    XTaskQueueUnregisterMonitor(composite, joinedToken);
+    XTaskQueueSubmitCallback(queue, 0, &tally, Record);
+    if (source.work != 3 || joined.work != 2) return Fail("unregistered monitor still called");
+    if (!XTaskQueueDispatch(queue, 0, 0)) return Fail("dispatch after unregister");
+
+    Tally kept;
+    Tally dropped;
+    HANDLE event = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    RegistrationToken waiter{};
+    XTaskQueueSubmitCallback(queue, 0, &kept, Record);
+    XTaskQueueSubmitCallback(composite, 0, &dropped, Record);
+    XTaskQueueSubmitDelayedCallback(composite, 0, 60000, &dropped, Record);
+    if (FAILED(XTaskQueueRegisterWaiter(composite, 0, event, &dropped, Record, &waiter))) return Fail("register composite waiter");
+    g_terminated = false;
+    if (FAILED(XTaskQueueTerminate(composite, true, nullptr, Terminated)) || !g_terminated) return Fail("terminate composite");
+    if (dropped.canceled != 3 || dropped.ran != 0) {
+        std::printf("FAIL composite termination ran=%d canceled=%d\n", dropped.ran.load(), dropped.canceled.load());
+        return 1;
+    }
+    if (XTaskQueueSubmitCallback(composite, 0, &dropped, Record) != E_ABORT) return Fail("submit to terminated composite");
+    SetEvent(event);
+    if (!XTaskQueueDispatch(queue, 0, 0) || kept.ran != 1 || kept.canceled != 0) return Fail("source work survives composite termination");
+    if (XTaskQueueDispatch(queue, 0, 200) || dropped.ran != 0) return Fail("terminated composite waiter fired");
+    XTaskQueueUnregisterWaiter(composite, waiter);
+    XTaskQueueCloseHandle(composite);
+    CloseHandle(event);
+
+    void* pool = nullptr;
+    if (FAILED(XTaskQueueCreate(1, 1, &pool))) return Fail("composite pool queue");
+    void* poolPort = nullptr;
+    XTaskQueueGetPort(pool, 0, &poolPort);
+    void* poolComposite = nullptr;
+    if (FAILED(XTaskQueueCreateComposite(poolPort, port, &poolComposite))) return Fail("composite of two queues");
+    Monitored poolSeen;
+    RegistrationToken poolToken{};
+    XTaskQueueRegisterMonitor(pool, &poolSeen, Monitor, &poolToken);
+    XTaskQueueCloseHandle(pool);
+    Tally pooled;
+    XTaskQueueSubmitCallback(poolComposite, 0, &pooled, Record);
+    if (WaitForSingleObject(pooled.signaled, 10000) != WAIT_OBJECT_0 || pooled.ran != 1) return Fail("composite runs on the source thread pool port");
+    if (poolSeen.work != 1) return Fail("composite keeps its source queue alive");
+    XTaskQueueSubmitCallback(poolComposite, 1, &pooled, Record);
+    if (!XTaskQueueDispatch(queue, 0, 0) || pooled.ran != 2) return Fail("composite completion on the other queue's port");
+    XTaskQueueTerminate(poolComposite, true, nullptr, nullptr);
+    XTaskQueueCloseHandle(poolComposite);
+
+    std::uint64_t garbage[4] = {};
+    void* invalid = nullptr;
+    if (XTaskQueueCreateComposite(nullptr, port, &invalid) != InvalidHandle || invalid != nullptr) return Fail("composite of a null port");
+    if (XTaskQueueCreateComposite(port, garbage, &invalid) != InvalidHandle || invalid != nullptr) return Fail("composite of a foreign port");
+
+    void* closed = nullptr;
+    XTaskQueueCreate(0, 0, &closed);
+    void* closedPort = nullptr;
+    XTaskQueueGetPort(closed, 0, &closedPort);
+    Tally pendingWork;
+    XTaskQueueSubmitCallback(closed, 0, &pendingWork, Record);
+    XTaskQueueCloseHandle(closed);
+    void* reopened = nullptr;
+    if (FAILED(XTaskQueueCreateComposite(closedPort, closedPort, &reopened))) return Fail("closed queue with pending work stays alive");
+    if (!XTaskQueueDispatch(reopened, 0, 0) || pendingWork.ran != 1 || pendingWork.canceled != 0) return Fail("pending work of a closed queue runs");
+    void* gone = nullptr;
+    XTaskQueueCreate(0, 0, &gone);
+    void* gonePort = nullptr;
+    XTaskQueueGetPort(gone, 1, &gonePort);
+    XTaskQueueCloseHandle(gone);
+    if (XTaskQueueCreateComposite(gonePort, gonePort, &invalid) != InvalidHandle) return Fail("composite of a released queue's port");
+
+    Tally survivor;
+    XTaskQueueSubmitCallback(reopened, 0, &survivor, Record);
+    void* sourceOfReopened = nullptr;
+    XTaskQueueCreate(0, 0, &sourceOfReopened);
+    void* livePort = nullptr;
+    XTaskQueueGetPort(sourceOfReopened, 0, &livePort);
+    void* user = nullptr;
+    XTaskQueueCreateComposite(livePort, livePort, &user);
+    Tally inUse;
+    XTaskQueueSubmitCallback(user, 0, &inUse, Record);
+    XTaskQueueSubmitCallback(sourceOfReopened, 0, &inUse, Record);
+    if (FAILED(XTaskQueueTerminate(sourceOfReopened, true, nullptr, nullptr))) return Fail("terminate the source of a composite");
+    if (inUse.canceled != 1 || inUse.ran != 0) return Fail("source termination cancels only its own work");
+    if (XTaskQueueSubmitCallback(sourceOfReopened, 0, &inUse, Record) != E_ABORT) return Fail("submit to the terminated source");
+    if (FAILED(XTaskQueueSubmitCallback(user, 0, &inUse, Record))) return Fail("composite still accepts work after its source terminated");
+    if (!XTaskQueueDispatch(user, 0, 0) || !XTaskQueueDispatch(user, 0, 0) || inUse.ran != 2) return Fail("composite work runs after its source terminated");
+    XTaskQueueTerminate(user, true, nullptr, nullptr);
+    XTaskQueueCloseHandle(user);
+    XTaskQueueCloseHandle(sourceOfReopened);
+    XTaskQueueTerminate(reopened, true, nullptr, nullptr);
+    XTaskQueueCloseHandle(reopened);
+    if (survivor.canceled != 1) return Fail("work on a reopened port canceled with its composite");
+
+    void* immediate = nullptr;
+    XTaskQueueCreate(3, 3, &immediate);
+    Ordered ordered;
+    RegistrationToken orderedToken{};
+    XTaskQueueRegisterMonitor(immediate, &ordered.seen, Monitor, &orderedToken);
+    for (int i = 0; i < 3; ++i) XTaskQueueSubmitCallback(immediate, 0, &ordered, CheckMonitored);
+    if (ordered.runs != 3 || ordered.monitorFirst != 3) return Fail("immediate port calls monitors before the callback");
+    XTaskQueueUnregisterMonitor(immediate, orderedToken);
+    XTaskQueueTerminate(immediate, true, nullptr, nullptr);
+    XTaskQueueCloseHandle(immediate);
+
+    Churn churn;
+    XTaskQueueCreate(3, 3, &churn.source);
+    XTaskQueueGetPort(churn.source, 0, &churn.port);
+    Monitored churnSeen;
+    RegistrationToken churnToken{};
+    XTaskQueueRegisterMonitor(churn.source, &churnSeen, Monitor, &churnToken);
+    std::atomic<int> churnSubmits{0};
+    std::thread submitter([&] {
+        while (!churn.stop) {
+            if (FAILED(XTaskQueueSubmitCallback(churn.source, 0, nullptr, Count))) churn.failures.fetch_add(1);
+            churnSubmits.fetch_add(1);
+        }
+    });
+    std::thread creator([&] {
+        for (int i = 0; i < 2000; ++i) {
+            void* composite = nullptr;
+            if (FAILED(XTaskQueueCreateComposite(churn.port, churn.port, &composite))) {
+                churn.failures.fetch_add(1);
+                continue;
+            }
+            XTaskQueueCloseHandle(composite);
+        }
+        churn.stop = true;
+    });
+    creator.join();
+    submitter.join();
+    if (churn.failures != 0 || churnSeen.work != churnSubmits) return Fail("composites created while the source is in use");
+    XTaskQueueUnregisterMonitor(churn.source, churnToken);
+    XTaskQueueTerminate(churn.source, true, nullptr, nullptr);
+    XTaskQueueCloseHandle(churn.source);
+
+    XTaskQueueUnregisterMonitor(queue, sourceToken);
+    XTaskQueueTerminate(queue, true, nullptr, nullptr);
+    XTaskQueueCloseHandle(queue);
+    std::printf("composite ok\n");
+    return 0;
+}
+
+int TerminateReentry() {
+    if (FAILED(XTaskQueueCreate(0, 0, &g_reentryQueue)) || FAILED(XTaskQueueCreate(0, 0, &g_otherQueue))) return Fail("terminate reentry queues");
+    XTaskQueueSubmitCallback(g_otherQueue, 0, nullptr, Count);
+    XTaskQueueSubmitCallback(g_reentryQueue, 0, nullptr, TerminateOwnQueue);
+    XTaskQueueDispatch(g_reentryQueue, 0, 0);
+    return Fail("waiting termination from a dispatched callback returned");
+}
+
+struct SlowMonitor {
+    std::atomic<int> calls{0};
+    std::atomic<bool> inside{false};
+    HANDLE entered = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+};
+
+void Slow(void* context, void*, std::uint32_t) {
+    auto* slow = static_cast<SlowMonitor*>(context);
+    slow->inside = true;
+    slow->calls.fetch_add(1);
+    SetEvent(slow->entered);
+    Sleep(200);
+    slow->inside = false;
+}
+
+struct Unregistering {
+    void* queue = nullptr;
+    RegistrationToken token{};
+};
+
+void SelfUnregister(void* context, void*, std::uint32_t) {
+    auto* self = static_cast<Unregistering*>(context);
+    XTaskQueueUnregisterMonitor(self->queue, self->token);
+}
+
+struct Remover {
+    void* queue = nullptr;
+    RegistrationToken target{};
+    std::atomic<int> calls{0};
+};
+
+void RemoveOther(void* context, void*, std::uint32_t) {
+    auto* remover = static_cast<Remover*>(context);
+    if (remover->calls.fetch_add(1) == 0) XTaskQueueUnregisterMonitor(remover->queue, remover->target);
+}
+
+int MonitorScenario() {
+    void* queue = nullptr;
+    if (FAILED(XTaskQueueCreate(0, 0, &queue))) return Fail("monitor queue");
+    SlowMonitor slow;
+    RegistrationToken token{};
+    XTaskQueueRegisterMonitor(queue, &slow, Slow, &token);
+    std::thread submitter([queue] { XTaskQueueSubmitCallback(queue, 0, nullptr, Count); });
+    if (WaitForSingleObject(slow.entered, 5000) != WAIT_OBJECT_0) return Fail("slow monitor called");
+    XTaskQueueUnregisterMonitor(queue, token);
+    const bool stillInside = slow.inside;
+    submitter.join();
+    if (stillInside) return Fail("unregister returned while the monitor was running");
+    XTaskQueueSubmitCallback(queue, 0, nullptr, Count);
+    if (slow.calls != 1) return Fail("monitor called after unregister");
+
+    Remover remover;
+    remover.queue = queue;
+    Monitored target;
+    RegistrationToken removerToken{};
+    XTaskQueueRegisterMonitor(queue, &remover, RemoveOther, &removerToken);
+    XTaskQueueRegisterMonitor(queue, &target, Monitor, &remover.target);
+    XTaskQueueSubmitCallback(queue, 0, nullptr, Count);
+    XTaskQueueSubmitCallback(queue, 0, nullptr, Count);
+    if (remover.calls != 2 || target.work != 0) {
+        std::printf("FAIL monitor unregistering another remover=%d target=%d\n", remover.calls.load(), target.work.load());
+        return 1;
+    }
+    XTaskQueueUnregisterMonitor(queue, removerToken);
+
+    std::atomic<bool> stop{false};
+    std::atomic<int> submitted{0};
+    std::vector<std::thread> threads;
+    for (int i = 0; i < 4; ++i) {
+        threads.emplace_back([&, i] {
+            while (!stop) {
+                XTaskQueueSubmitCallback(queue, i & 1, nullptr, Count);
+                submitted.fetch_add(1);
+            }
+        });
+    }
+    for (int round = 0; round < 200; ++round) {
+        Monitored seen;
+        RegistrationToken churn{};
+        XTaskQueueRegisterMonitor(queue, &seen, Monitor, &churn);
+        XTaskQueueUnregisterMonitor(queue, churn);
+        const int after = seen.work + seen.completion;
+        Sleep(0);
+        if (seen.work + seen.completion != after) {
+            stop = true;
+            for (std::thread& thread : threads) thread.join();
+            return Fail("monitor called after unregister under concurrent submits");
+        }
+    }
+    stop = true;
+    for (std::thread& thread : threads) thread.join();
+    while (XTaskQueueDispatch(queue, 0, 0)) {}
+    while (XTaskQueueDispatch(queue, 1, 0)) {}
+    XTaskQueueTerminate(queue, true, nullptr, nullptr);
+    XTaskQueueCloseHandle(queue);
+    std::printf("monitor ok\n");
+    return 0;
+}
+
+int MonitorReentry() {
+    void* queue = nullptr;
+    if (FAILED(XTaskQueueCreate(0, 0, &queue))) return Fail("reentry queue");
+    Unregistering self;
+    self.queue = queue;
+    XTaskQueueRegisterMonitor(queue, &self, SelfUnregister, &self.token);
+    XTaskQueueSubmitCallback(queue, 0, nullptr, Count);
+    return Fail("unregistering a monitor from its own callback returned");
+}
+
+struct SelfWaiter {
+    void* queue = nullptr;
+    RegistrationToken token{};
+    std::atomic<int> calls{0};
+    HANDLE fired = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+};
+
+void UnregisterSelf(void* context, bool) {
+    auto* self = static_cast<SelfWaiter*>(context);
+    self->calls.fetch_add(1);
+    XTaskQueueUnregisterWaiter(self->queue, self->token);
+    SetEvent(self->fired);
+}
+
+int WaitRepeated(void* queue, bool manual) {
+    HANDLE event = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    Tally tally;
+    RegistrationToken token{};
+    if (FAILED(XTaskQueueRegisterWaiter(queue, 1, event, &tally, Record, &token)) || token.token == 0) return Fail("register waiter");
+    for (int i = 1; i <= 5; ++i) {
+        SetEvent(event);
+        if (manual && !XTaskQueueDispatch(queue, 1, 5000)) return Fail("manual waiter dispatch");
+        if (WaitForSingleObject(tally.signaled, 5000) != WAIT_OBJECT_0) return Fail("waiter fired");
+        if (manual ? XTaskQueueDispatch(queue, 1, 100) : WaitForSingleObject(tally.signaled, 100) == WAIT_OBJECT_0) return Fail("auto-reset waiter fired twice");
+        if (tally.ran != i || tally.canceled != 0) return Fail("waiter count");
+    }
+    XTaskQueueUnregisterWaiter(queue, token);
+    SetEvent(event);
+    if (manual ? XTaskQueueDispatch(queue, 1, 300) : WaitForSingleObject(tally.signaled, 300) == WAIT_OBJECT_0) return Fail("waiter fired after unregister");
+    CloseHandle(event);
+    return 0;
+}
+
+int WaiterScenario() {
+    void* pool = nullptr;
+    void* manual = nullptr;
+    void* immediate = nullptr;
+    if (FAILED(XTaskQueueCreate(1, 1, &pool)) || FAILED(XTaskQueueCreate(0, 0, &manual)) || FAILED(XTaskQueueCreate(3, 3, &immediate))) return Fail("waiter queues");
+    Tally tally;
+    RegistrationToken token{};
+    HANDLE event = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+    if (XTaskQueueRegisterWaiter(pool, 0, nullptr, &tally, Record, &token) != E_INVALIDARG) return Fail("waiter without handle");
+    if (XTaskQueueRegisterWaiter(pool, 2, event, &tally, Record, &token) != E_INVALIDARG) return Fail("waiter on an invalid port");
+    if (XTaskQueueRegisterWaiter(pool, 0, event, &tally, nullptr, &token) != E_POINTER) return Fail("waiter without callback");
+    if (XTaskQueueRegisterWaiter(pool, 0, event, &tally, Record, nullptr) != E_POINTER) return Fail("waiter without token");
+    if (WaitRepeated(pool, false) != 0 || WaitRepeated(manual, true) != 0 || WaitRepeated(immediate, false) != 0) return 1;
+
+    if (FAILED(XTaskQueueRegisterWaiter(manual, 0, event, &tally, Record, &token))) return Fail("manual-reset waiter");
+    SetEvent(event);
+    for (int i = 0; i < 3; ++i) {
+        if (!XTaskQueueDispatch(manual, 0, 5000)) return Fail("signaled manual-reset waiter fires again");
+    }
+    if (tally.ran != 3) return Fail("manual-reset waiter count");
+    XTaskQueueUnregisterWaiter(manual, token);
+    ResetEvent(event);
+    while (XTaskQueueDispatch(manual, 0, 0)) {}
+    if (XTaskQueueDispatch(manual, 0, 200)) return Fail("manual-reset waiter after unregister");
+
+    SelfWaiter self;
+    self.queue = immediate;
+    HANDLE selfEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    XTaskQueueRegisterWaiter(immediate, 0, selfEvent, &self, UnregisterSelf, &self.token);
+    SetEvent(selfEvent);
+    if (WaitForSingleObject(self.fired, 10000) != WAIT_OBJECT_0) return Fail("self-unregistering waiter fired");
+    SetEvent(selfEvent);
+    if (WaitForSingleObject(self.fired, 200) == WAIT_OBJECT_0 || self.calls != 1) return Fail("waiter unregistered from its own callback");
+    CloseHandle(self.fired);
+
+    void* dropped = nullptr;
+    XTaskQueueCreate(1, 1, &dropped);
+    Tally orphan;
+    HANDLE orphanEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+    RegistrationToken orphanToken{};
+    XTaskQueueRegisterWaiter(dropped, 0, orphanEvent, &orphan, Record, &orphanToken);
+    XTaskQueueRegisterWaiter(dropped, 1, orphanEvent, &orphan, Record, &orphanToken);
+    XTaskQueueCloseHandle(dropped);
+    SetEvent(orphanEvent);
+    if (WaitForSingleObject(orphan.signaled, 300) == WAIT_OBJECT_0 || orphan.ran != 0 || orphan.canceled != 0) return Fail("waiters of a closed queue called");
+    CloseHandle(orphanEvent);
+
+    Tally canceled;
+    HANDLE idle = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    RegistrationToken first{};
+    RegistrationToken second{};
+    XTaskQueueRegisterWaiter(pool, 0, idle, &canceled, Record, &first);
+    XTaskQueueRegisterWaiter(pool, 1, idle, &canceled, Record, &second);
+    if (first.token == second.token) return Fail("waiter tokens are distinct");
+    XTaskQueueTerminate(pool, true, nullptr, nullptr);
+    if (canceled.canceled != 2 || canceled.ran != 0) return Fail("terminate cancels each waiter once");
+    if (XTaskQueueRegisterWaiter(pool, 0, idle, &canceled, Record, &first) != E_ABORT) return Fail("waiter on a terminated queue");
+    SetEvent(idle);
+    Sleep(100);
+    if (canceled.canceled != 2 || canceled.ran != 0) return Fail("terminated waiter fired");
+    XTaskQueueUnregisterWaiter(pool, second);
+
+    Tally racing;
+    HANDLE storm = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+    void* racer = nullptr;
+    for (int round = 0; round < 50; ++round) {
+        XTaskQueueCreate(1, 1, &racer);
+        RegistrationToken stormToken{};
+        XTaskQueueRegisterWaiter(racer, 0, storm, &racing, Record, &stormToken);
+        std::thread signaler([storm] { for (int i = 0; i < 20; ++i) SetEvent(storm); });
+        if (round & 1) {
+            XTaskQueueUnregisterWaiter(racer, stormToken);
+        }
+        signaler.join();
+        XTaskQueueTerminate(racer, true, nullptr, nullptr);
+        XTaskQueueCloseHandle(racer);
+    }
+    const int settled = racing.ran + racing.canceled;
+    Sleep(100);
+    if (racing.ran + racing.canceled != settled) return Fail("waiter fired after its queue terminated");
+    if (racing.canceled > 25) return Fail("unregistered waiter canceled at termination");
+
+    XTaskQueueTerminate(manual, true, nullptr, nullptr);
+    XTaskQueueTerminate(immediate, true, nullptr, nullptr);
+    XTaskQueueCloseHandle(pool);
+    XTaskQueueCloseHandle(manual);
+    XTaskQueueCloseHandle(immediate);
+    CloseHandle(event);
+    CloseHandle(selfEvent);
+    CloseHandle(idle);
+    CloseHandle(storm);
+    std::printf("waiter ok\n");
+    return 0;
+}
+
 }
 
 int main(int argc, char** argv) {
@@ -930,6 +1444,21 @@ int main(int argc, char** argv) {
     }
     if (std::strcmp(scenario, "gamesave") == 0) {
         return GameSave();
+    }
+    if (std::strcmp(scenario, "taskqueue_composite") == 0) {
+        return Guarded("composite", Composite);
+    }
+    if (std::strcmp(scenario, "taskqueue_monitor") == 0) {
+        return Guarded("monitor", MonitorScenario);
+    }
+    if (std::strcmp(scenario, "taskqueue_monitor_reentry") == 0) {
+        return Guarded("monitor reentry", MonitorReentry);
+    }
+    if (std::strcmp(scenario, "taskqueue_terminate_reentry") == 0) {
+        return Guarded("terminate reentry", TerminateReentry);
+    }
+    if (std::strcmp(scenario, "taskqueue_waiter") == 0) {
+        return Guarded("waiter", WaiterScenario);
     }
     if (std::strcmp(scenario, "async_null") == 0) {
         XAsyncGetStatus(nullptr, false);

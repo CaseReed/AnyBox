@@ -32,6 +32,11 @@ DEVICES = {
 
 EXPECTED = {
     "taskqueue": (0, "none"),
+    "taskqueue_composite": (0, "none"),
+    "taskqueue_monitor": (0, "none"),
+    "taskqueue_monitor_reentry": (0xAB02, "unsupported"),
+    "taskqueue_waiter": (0, "none"),
+    "taskqueue_terminate_reentry": (0xAB02, "unsupported"),
     "stub": (0xAB01, "not-implemented"),
     "crash": (0xC0000005, "crash"),
     "crash_chained": (0xC0000005, "crash"),
@@ -57,6 +62,8 @@ EXPECTED = {
 
 STOPPED_IN = {
     "stub": "XUserAddAsync",
+    "taskqueue_monitor_reentry": "XTaskQueueUnregisterMonitor",
+    "taskqueue_terminate_reentry": "XTaskQueueTerminate",
     "device_none": "XSystemGetDeviceType",
     "device_noexecutable": "XSystemGetDeviceType",
     "device_unknown": "XSystemGetDeviceType",
@@ -126,6 +133,12 @@ def main():
     assert (run.returncode & 0xFFFFFFFF) == code, f"exit code 0x{run.returncode & 0xFFFFFFFF:x}, expected 0x{code:x}"
     if args.scenario == "taskqueue":
         assert "task queue ok" in run.stdout
+    if args.scenario == "taskqueue_composite":
+        assert "composite ok" in run.stdout
+    if args.scenario == "taskqueue_monitor":
+        assert "monitor ok" in run.stdout
+    if args.scenario == "taskqueue_waiter":
+        assert "waiter ok" in run.stdout
     if args.scenario == "console_id":
         assert "console id ok" in run.stdout
     if args.scenario == "sandbox_id":

@@ -19,6 +19,12 @@ ABX_API bool XTaskQueueIsEmpty(XTaskQueueHandle queue, XTaskQueuePort port);
 ABX_API HRESULT XTaskQueueTerminate(XTaskQueueHandle queue, bool wait, void* context, XTaskQueueTerminatedCallback* callback);
 ABX_API bool XTaskQueueGetCurrentProcessTaskQueue(XTaskQueueHandle* queue);
 ABX_API void XTaskQueueSetCurrentProcessTaskQueue(XTaskQueueHandle queue);
+ABX_API HRESULT XTaskQueueCreateComposite(XTaskQueuePortHandle workPort, XTaskQueuePortHandle completionPort, XTaskQueueHandle* queue);
+ABX_API HRESULT XTaskQueueGetPort(XTaskQueueHandle queue, XTaskQueuePort port, XTaskQueuePortHandle* portHandle);
+ABX_API HRESULT XTaskQueueRegisterMonitor(XTaskQueueHandle queue, void* callbackContext, XTaskQueueMonitorCallback* callback, XTaskQueueRegistrationToken* token);
+ABX_API void XTaskQueueUnregisterMonitor(XTaskQueueHandle queue, XTaskQueueRegistrationToken token);
+ABX_API HRESULT XTaskQueueRegisterWaiter(XTaskQueueHandle queue, XTaskQueuePort port, HANDLE waitHandle, void* callbackContext, XTaskQueueCallback* callback, XTaskQueueRegistrationToken* token);
+ABX_API void XTaskQueueUnregisterWaiter(XTaskQueueHandle queue, XTaskQueueRegistrationToken token);
 
 ABX_API HRESULT XAsyncBegin(XAsyncBlock* asyncBlock, void* context, const void* identity, const char* identityName, XAsyncProvider* provider);
 ABX_API HRESULT XAsyncSchedule(XAsyncBlock* asyncBlock, std::uint32_t delayInMs);
@@ -67,12 +73,6 @@ ABX_API HRESULT XThreadSetTimeSensitive(bool isTimeSensitiveThread);
 ABX_API bool XThreadIsTimeSensitive();
 ABX_API void XThreadAssertNotTimeSensitive();
 
-ABX_API HRESULT XTaskQueueCreateComposite();
-ABX_API HRESULT XTaskQueueGetPort();
-ABX_API HRESULT XTaskQueueRegisterMonitor();
-ABX_API HRESULT XTaskQueueUnregisterMonitor();
-ABX_API HRESULT XTaskQueueRegisterWaiter();
-ABX_API HRESULT XTaskQueueUnregisterWaiter();
 ABX_API HRESULT XUserAddAsync();
 ABX_API HRESULT XUserAddResult();
 ABX_API HRESULT XUserCloseHandle();

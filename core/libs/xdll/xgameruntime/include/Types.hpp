@@ -21,7 +21,15 @@ enum class XTaskQueuePort : std::uint32_t {
     Completion,
 };
 
+struct XTaskQueuePortObject;
+using XTaskQueuePortHandle = XTaskQueuePortObject*;
+
+struct XTaskQueueRegistrationToken {
+    std::uint64_t token;
+};
+
 using XTaskQueueCallback = void(void* context, bool canceled);
+using XTaskQueueMonitorCallback = void(void* context, XTaskQueueHandle queue, XTaskQueuePort port);
 using XTaskQueueTerminatedCallback = void(void* context);
 
 inline constexpr std::uint32_t XTaskQueueNoWait = 0;
