@@ -50,6 +50,25 @@ struct RegistrationToken {
     std::uint64_t token;
 };
 
+struct Version {
+    std::uint16_t major;
+    std::uint16_t minor;
+    std::uint16_t build;
+    std::uint16_t revision;
+};
+
+struct AnalyticsInfo {
+    Version osVersion;
+    Version hostingOsVersion;
+    char family[64];
+    char form[64];
+};
+
+struct RuntimeInfo {
+    Version runtimeVersion;
+    Version availableVersion;
+};
+
 extern "C" {
 __declspec(dllimport) HRESULT XAsyncBegin(AsyncBlock* async, void* context, const void* identity, const char* identityName, AsyncProvider provider);
 __declspec(dllimport) HRESULT XAsyncSchedule(AsyncBlock* async, std::uint32_t delayMs);
@@ -116,6 +135,12 @@ __declspec(dllimport) HRESULT XGameSaveFilesGetFolderWithUiResult(AsyncBlock* as
 __declspec(dllimport) HRESULT XGameSaveFilesGetRemainingQuota(void* user, const char* configurationId, std::int64_t* remaining);
 __declspec(dllimport) HRESULT XSystemGetConsoleId(std::size_t consoleIdSize, char* consoleId, std::size_t* consoleIdUsed);
 __declspec(dllimport) HRESULT XSystemGetXboxLiveSandboxId(std::size_t sandboxIdSize, char* sandboxId, std::size_t* sandboxIdUsed);
+__declspec(dllimport) HRESULT XSystemGetAppSpecificDeviceId(std::size_t appSpecificDeviceIdSize, char* appSpecificDeviceId, std::size_t* appSpecificDeviceIdUsed);
+__declspec(dllimport) AnalyticsInfo XSystemGetAnalyticsInfo();
+__declspec(dllimport) RuntimeInfo XSystemGetRuntimeInfo();
+__declspec(dllimport) void XSystemAllowFullDownloadBandwidth(bool enable);
+__declspec(dllimport) HRESULT XSystemHandleTrack(void (*callback)(void*, std::uint32_t, std::uint32_t, void*), void* context);
+__declspec(dllimport) bool XSystemIsHandleValid(void* handle);
 }
 
 struct RuntimeOptions {
@@ -1692,6 +1717,51 @@ int main(int argc, char** argv) {
         if (XSystemGetXboxLiveSandboxId(sizeof(id), id, nullptr) != S_OK) return Fail("sandbox id without used");
         std::printf("sandbox id ok\n");
         return 0;
+    }
+    if (std::strcmp(scenario, "app_device_id") == 0) {
+        char id[45];
+        std::memset(id, 'x', sizeof(id));
+        std::size_t used = 7;
+        if (XSystemGetAppSpecificDeviceId(sizeof(id) - 1, id, &used) != HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER) || used != 7 || id[0] != 'x') return Fail("short app device id buffer");
+        if (XSystemGetAppSpecificDeviceId(sizeof(id), id, &used) != S_OK || used != sizeof(id) || std::strlen(id) != sizeof(id) - 1) return Fail("app device id");
+        if (std::strspn(id, "0123456789ABCDEF") != sizeof(id) - 1 || std::strspn(id, "0") == sizeof(id) - 1) return Fail("app device id value");
+        char again[64] = {};
+        if (XSystemGetAppSpecificDeviceId(sizeof(again), again, nullptr) != S_OK || std::strcmp(again, id) != 0) return Fail("app device id without used");
+        std::printf("app device id %s\n", id);
+        return 0;
+    }
+    if (std::strcmp(scenario, "system_pc") == 0) {
+        const AnalyticsInfo analytics = XSystemGetAnalyticsInfo();
+        if (std::strcmp(analytics.family, "Windows") != 0 || analytics.form[0] != '\0') return Fail("analytics family and form");
+        if (std::memcmp(&analytics.osVersion, &analytics.hostingOsVersion, sizeof(Version)) != 0) return Fail("analytics hosting version");
+        const RuntimeInfo runtime = XSystemGetRuntimeInfo();
+        const Version zero{};
+        if (std::memcmp(&runtime.runtimeVersion, &zero, sizeof(zero)) != 0 || std::memcmp(&runtime.availableVersion, &zero, sizeof(zero)) != 0) return Fail("runtime info");
+        XSystemAllowFullDownloadBandwidth(true);
+        XSystemAllowFullDownloadBandwidth(false);
+        if (XSystemHandleTrack(nullptr, nullptr) != S_OK) return Fail("handle tracking off");
+        if (XSystemIsHandleValid(nullptr)) return Fail("null handle valid");
+        std::printf("analytics os %u.%u.%u.%u\n", analytics.osVersion.major, analytics.osVersion.minor, analytics.osVersion.build, analytics.osVersion.revision);
+        std::printf("system pc ok\n");
+        return 0;
+    }
+    if (std::strcmp(scenario, "analytics_console") == 0) {
+        XSystemGetAnalyticsInfo();
+        return Fail("analytics on a console title returned");
+    }
+    if (std::strcmp(scenario, "runtime_info_console") == 0) {
+        XSystemGetRuntimeInfo();
+        return Fail("runtime info on a console title returned");
+    }
+    if (std::strcmp(scenario, "handle_track") == 0) {
+        XSystemHandleTrack([](void*, std::uint32_t, std::uint32_t, void*) {}, nullptr);
+        return Fail("handle tracking with a callback returned");
+    }
+    if (std::strcmp(scenario, "handle_valid") == 0) {
+        void* queue = nullptr;
+        if (XTaskQueueCreate(0, 0, &queue) != S_OK) return Fail("XTaskQueueCreate");
+        XSystemIsHandleValid(queue);
+        return Fail("handle check of a task queue returned");
     }
     if (std::strcmp(scenario, "async") == 0) {
         return Async();

@@ -33,6 +33,12 @@ DEVICES = {
     "device_unknown": (executable_list("Desktop"), None),
 }
 
+FAMILIES = {
+    "system_pc": "PC",
+    "analytics_console": "Scarlett",
+    "runtime_info_console": "Scarlett",
+}
+
 EXPECTED = {
     "taskqueue": (0, "none"),
     "taskqueue_composite": (0, "none"),
@@ -72,9 +78,15 @@ EXPECTED = {
     "startup": (0, "none"),
     "startup_options": (0xAB02, "unsupported"),
     "thread_assert": (0xAB02, "unsupported"),
+    "app_device_id": (0, "none"),
+    "system_pc": (0, "none"),
+    "analytics_console": (0xAB02, "unsupported"),
+    "runtime_info_console": (0xAB02, "unsupported"),
+    "handle_track": (0xAB02, "unsupported"),
+    "handle_valid": (0xAB02, "unsupported"),
 }
 
-DIRECT_CALLS = {"stub", "stub_debugger", "api_impl", "api_unmapped", "device_none", "device_noexecutable", "device_unknown", "startup_options", "gamesave_folders"}
+DIRECT_CALLS = {"stub", "stub_debugger", "api_impl", "api_unmapped", "device_none", "device_noexecutable", "device_unknown", "startup_options", "gamesave_folders", "analytics_console", "runtime_info_console", "handle_track", "handle_valid"}
 WORKER_CALLS = {"gamesavefiles_containers"}
 
 class ExceptionRecord(ctypes.Structure):
@@ -138,6 +150,10 @@ STOPPED_IN = {
     "gamesavefiles_containers": "XGameSaveFilesGetFolderWithUiAsync",
     "gamesave_folders": "XGameSaveInitializeProvider",
     "gamesave_folders_async": "XGameSaveInitializeProviderAsync",
+    "analytics_console": "XSystemGetAnalyticsInfo",
+    "runtime_info_console": "XSystemGetRuntimeInfo",
+    "handle_track": "XSystemHandleTrack",
+    "handle_valid": "XSystemIsHandleValid",
 }
 
 STOP_MESSAGES = {
@@ -146,6 +162,10 @@ STOP_MESSAGES = {
     "gamesave_folders_async": "holds XGameSaveFiles files",
     "api_unmapped": "slot 20 of the GDK API interface {073b7dcb-1fcf-4030-94be-e3c9eb623428} (threading: XAsync and XTaskQueue) is not mapped",
     "api_impl": "interface {cafef00d-0102-0304-0506-0708090a0b0c} of provider {11111111-2222-3333-4455-66778899aabb} is not implemented",
+    "analytics_console": "title OS version and device form a console reports are not documented",
+    "runtime_info_console": "a console always reports the version of its gaming runtime",
+    "handle_track": "does not report handle creation and destruction",
+    "handle_valid": "no registry of live runtime handles",
 }
 
 SEEDS = {
@@ -154,6 +174,25 @@ SEEDS = {
     "gamesave_folders_async": "slot1/deep/state.dat",
     "gamesave_empty_folder": "slot1/deep/",
 }
+
+
+def app_device_id(stdout):
+    lines = [line for line in stdout.splitlines() if line.startswith("app device id ")]
+    assert len(lines) == 1, stdout
+    return lines[0][len("app device id "):]
+
+
+def machine_guid():
+    import winreg
+    with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Cryptography") as key:
+        return winreg.QueryValueEx(key, "MachineGuid")[0]
+
+
+def host_windows_version():
+    import winreg
+    with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion") as key:
+        values = [winreg.QueryValueEx(key, name)[0] for name in ("CurrentMajorVersionNumber", "CurrentMinorVersionNumber", "CurrentBuildNumber", "UBR")]
+    return ".".join(str(int(value)) for value in values)
 
 
 def subsystem_offset(data):
@@ -187,7 +226,7 @@ def main():
     title = package / "title.exe"
     shutil.copyfile(args.title, title)
     set_console_subsystem(title)
-    executable, device = DEVICES.get(args.scenario, ("", None))
+    executable, device = DEVICES.get(args.scenario, (executable_list(FAMILIES[args.scenario]) if args.scenario in FAMILIES else "", None))
     config = None if executable is None else CONFIG.replace("  <ShellVisuals", executable + "  <ShellVisuals")
     if config is not None:
         (package / "MicrosoftGame.config").write_text(config, encoding="utf-8")
@@ -249,6 +288,22 @@ def main():
         assert "loader: LoadLibraryExW(xgameruntime.dll) from title.exe+0x" in run.stderr and "loads ab_xgameruntime.dll" in run.stderr, run.stderr
     if args.scenario == "startup":
         assert "startup ok" in run.stdout
+    if args.scenario == "app_device_id":
+        first = app_device_id(run.stdout)
+        machine = machine_guid().replace("-", "").upper()
+        assert machine[:8] not in first and machine[-8:] not in first, (first, "the machine ID shows through")
+        config_path = out / "MicrosoftGame.config"
+        config_path.write_text(config.replace("<TitleId>1234abcd</TitleId>", "<TitleId>5678ef01</TitleId>"), encoding="utf-8")
+        other = subprocess.run([str(converted), argument], cwd=out, env=env, capture_output=True, text=True, timeout=60)
+        assert other.returncode == 0, (other.stdout, other.stderr)
+        assert app_device_id(other.stdout) != first, "another title gets the same ID"
+        config_path.write_text(config, encoding="utf-8")
+        again = subprocess.run([str(converted), argument], cwd=out, env=env, capture_output=True, text=True, timeout=60)
+        assert again.returncode == 0, (again.stdout, again.stderr)
+        assert app_device_id(again.stdout) == first, "the ID changes between runs of one title"
+    if args.scenario == "system_pc":
+        assert "system pc ok" in run.stdout, (run.stdout, run.stderr)
+        assert f"analytics os {host_windows_version()}" in run.stdout, (run.stdout, host_windows_version())
     if args.scenario == "crash_chained":
         assert run.stdout.count("title filter") == 1, run.stdout
     if args.scenario == "crash_recovered":

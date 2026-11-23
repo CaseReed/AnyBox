@@ -69,4 +69,10 @@ __declspec(dllexport) HRESULT XGameSaveFilesGetFolderWithUiResult(void*, std::si
 __declspec(dllexport) HRESULT XGameSaveFilesGetRemainingQuota(void*, const char*, std::int64_t*) { return E_FAIL; }
 __declspec(dllexport) HRESULT XSystemGetConsoleId(std::size_t, char*, std::size_t*) { return E_FAIL; }
 __declspec(dllexport) HRESULT XSystemGetXboxLiveSandboxId(std::size_t, char*, std::size_t*) { return E_FAIL; }
+__declspec(dllexport) HRESULT XSystemGetAppSpecificDeviceId(std::size_t, char*, std::size_t*) { return E_FAIL; }
+__declspec(dllexport) std::uint64_t XSystemGetAnalyticsInfo() { return 0; }
+__declspec(dllexport) std::uint64_t XSystemGetRuntimeInfo() { return 0; }
+__declspec(dllexport) void XSystemAllowFullDownloadBandwidth(bool) {}
+__declspec(dllexport) HRESULT XSystemHandleTrack(void*, void*) { return E_FAIL; }
+__declspec(dllexport) bool XSystemIsHandleValid(void*) { return false; }
 }

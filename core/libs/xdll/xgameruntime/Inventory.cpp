@@ -10,7 +10,6 @@ ABX_API HRESULT XUserGetLocalId() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XUserGetState() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XUserRegisterForChangeEvent() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XUserUnregisterForChangeEvent() { AbxNotImplemented(__func__); }
-ABX_API HRESULT XSystemGetAppSpecificDeviceId() { AbxNotImplemented(__func__); }
 
 ABX_API HRESULT XAppBroadcastGetStatus() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XAppBroadcastIsAppBroadcasting() { AbxNotImplemented(__func__); }
@@ -278,11 +277,6 @@ ABX_API HRESULT XStoreShowRedeemTokenUIAsync() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XStoreShowRedeemTokenUIResult() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XStoreUnregisterGameLicenseChanged() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XStoreUnregisterPackageLicenseLost() { AbxNotImplemented(__func__); }
-ABX_API HRESULT XSystemAllowFullDownloadBandwidth() { AbxNotImplemented(__func__); }
-ABX_API HRESULT XSystemGetAnalyticsInfo() { AbxNotImplemented(__func__); }
-ABX_API HRESULT XSystemGetRuntimeInfo() { AbxNotImplemented(__func__); }
-ABX_API HRESULT XSystemHandleTrack() { AbxNotImplemented(__func__); }
-ABX_API HRESULT XSystemIsHandleValid() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XUserAddByIdWithUiAsync() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XUserAddByIdWithUiResult() { AbxNotImplemented(__func__); }
 ABX_API HRESULT XUserCheckPrivilege() { AbxNotImplemented(__func__); }

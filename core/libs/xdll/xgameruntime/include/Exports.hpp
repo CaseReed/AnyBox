@@ -77,6 +77,12 @@ ABX_API HRESULT XGameSaveFilesGetRemainingQuota(XUserHandle userContext, const c
 ABX_API XSystemDeviceType XSystemGetDeviceType();
 ABX_API HRESULT XSystemGetConsoleId(std::size_t consoleIdSize, char* consoleId, std::size_t* consoleIdUsed);
 ABX_API HRESULT XSystemGetXboxLiveSandboxId(std::size_t sandboxIdSize, char* sandboxId, std::size_t* sandboxIdUsed);
+ABX_API HRESULT XSystemGetAppSpecificDeviceId(std::size_t appSpecificDeviceIdSize, char* appSpecificDeviceId, std::size_t* appSpecificDeviceIdUsed);
+ABX_API XSystemAnalyticsInfo XSystemGetAnalyticsInfo();
+ABX_API XSystemRuntimeInfo XSystemGetRuntimeInfo();
+ABX_API void XSystemAllowFullDownloadBandwidth(bool enable);
+ABX_API HRESULT XSystemHandleTrack(XSystemHandleCallback* callback, void* context);
+ABX_API bool XSystemIsHandleValid(XSystemHandle handle);
 ABX_API bool XPackageIsPackagedProcess();
 ABX_API HRESULT XPackageGetCurrentProcessPackageIdentifier(std::size_t bufferSize, char* buffer);
 
@@ -94,7 +100,6 @@ ABX_API HRESULT XUserGetLocalId();
 ABX_API HRESULT XUserGetState();
 ABX_API HRESULT XUserRegisterForChangeEvent();
 ABX_API HRESULT XUserUnregisterForChangeEvent();
-ABX_API HRESULT XSystemGetAppSpecificDeviceId();
 
 ABX_API HRESULT XAppBroadcastGetStatus();
 ABX_API HRESULT XAppBroadcastIsAppBroadcasting();
@@ -362,11 +367,6 @@ ABX_API HRESULT XStoreShowRedeemTokenUIAsync();
 ABX_API HRESULT XStoreShowRedeemTokenUIResult();
 ABX_API HRESULT XStoreUnregisterGameLicenseChanged();
 ABX_API HRESULT XStoreUnregisterPackageLicenseLost();
-ABX_API HRESULT XSystemAllowFullDownloadBandwidth();
-ABX_API HRESULT XSystemGetAnalyticsInfo();
-ABX_API HRESULT XSystemGetRuntimeInfo();
-ABX_API HRESULT XSystemHandleTrack();
-ABX_API HRESULT XSystemIsHandleValid();
 ABX_API HRESULT XUserAddByIdWithUiAsync();
 ABX_API HRESULT XUserAddByIdWithUiResult();
 ABX_API HRESULT XUserCheckPrivilege();

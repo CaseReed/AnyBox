@@ -148,3 +148,52 @@ using XGameSaveBlobInfoCallback = bool(const XGameSaveBlobInfo* info, void* cont
 
 inline constexpr std::size_t XSystemConsoleIdBytes = 39;
 inline constexpr std::size_t XSystemXboxLiveSandboxIdMaxBytes = 16;
+inline constexpr std::size_t XSystemAppSpecificDeviceIdBytes = 45;
+
+struct XVersion {
+    std::uint16_t major;
+    std::uint16_t minor;
+    std::uint16_t build;
+    std::uint16_t revision;
+};
+
+static_assert(sizeof(XVersion) == sizeof(std::uint64_t));
+
+struct XSystemAnalyticsInfo {
+    XVersion osVersion;
+    XVersion hostingOsVersion;
+    char family[64];
+    char form[64];
+};
+
+struct XSystemRuntimeInfo {
+    XVersion runtimeVersion;
+    XVersion availableVersion;
+};
+
+enum class XSystemHandleType : std::uint32_t {
+    AppCaptureScreenshotStream = 0x00,
+    DisplayTimeoutDeferral = 0x01,
+    GameSaveContainer = 0x02,
+    GameSaveProvider = 0x03,
+    GameSaveUpdate = 0x04,
+    PackageInstallationMonitor = 0x05,
+    PackageMount = 0x06,
+    SpeechSynthesizer = 0x07,
+    SpeechSynthesizerStream = 0x08,
+    StoreContext = 0x09,
+    StoreLicense = 0x0a,
+    StoreProductQuery = 0x0b,
+    TaskQueue = 0x0c,
+    User = 0x0d,
+    UserSignOutDeferral = 0x0e,
+    GameUiTextEntry = 0x0f,
+};
+
+enum class XSystemHandleCallbackReason : std::uint32_t {
+    Created = 0x00,
+    Destroyed = 0x01,
+};
+
+using XSystemHandle = void*;
+using XSystemHandleCallback = void(XSystemHandle handle, XSystemHandleType type, XSystemHandleCallbackReason reason, void* context);
